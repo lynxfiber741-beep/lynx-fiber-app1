@@ -53,7 +53,7 @@ current_year = datetime.now().strftime("%Y")
 today_date = datetime.now().strftime("%Y-%m-%d")
 MASTER_APPROVAL_CODE = "LYNX-SECURE-2026"
 
-# Advanced Multi-Role Session Management
+# Multi-Role Session Management
 if "logged_in" not in st.session_state: st.session_state["logged_in"] = False
 if "user_role" not in st.session_state: st.session_state["user_role"] = None  # 'Admin' ya 'Staff'
 if "isp_id" not in st.session_state: st.session_state["isp_id"] = None
@@ -63,23 +63,22 @@ if "branding_mode" not in st.session_state: st.session_state["branding_mode"] = 
 
 # --- TOP PRO HEADER CONTROLLER ---
 if st.session_state["logged_in"]:
-    display_title = st.session_state["isp_name"].upper() if st.session_state["branding_mode"] == "Own Branding" else "LYNX FIBER"
+    display_title = st.session_state["isp_name"].upper() if st.session_state["branding_mode"] == "Own Branding" else "LYNX FIBER INTERNET"
     role_text = f"👤 {st.session_state['operator_name'].upper()} ({st.session_state['user_role'].upper()})"
     st.markdown(f'<div class="wasooli-header"><div class="wasooli-brand">🌐 HELLO!! {display_title}</div><div class="wasooli-role-badge">{role_text}</div></div>', unsafe_allow_html=True)
 else:
     st.markdown('<div class="wasooli-header"><div class="wasooli-brand">⚡ LYNX FIBER ADVANCED SYSTEM</div><div class="wasooli-role-badge">🔒 ACCESS SECURED</div></div>', unsafe_allow_html=True)
 
-# --- AUTHENTICATION GATEWAY WITH ROLE MANAGEMENT ---
+# --- AUTHENTICATION GATEWAY ---
 if not st.session_state["logged_in"]:
     _, col_center, _ = st.columns([1, 1.8, 1])
     with col_center:
         st.markdown("<br><br>", unsafe_allow_html=True)
         tab_staff, tab_admin, tab_register = st.tabs(["📲 Field Staff Login", "🔒 Owner/Admin Gate", "📝 Corporate Signup"])
         
-        # TAB 1: FIELD STAFF GATEWAY
         with tab_staff:
             with st.form("staff_login_form"):
-                st.caption("Field boys billing aur recovery receive karne ke liye yahan se login karein:")
+                st.caption("Field boys billing aur recovery receive karne ke liye login karein:")
                 s_user = st.text_input("Staff Username ID")
                 s_pass = st.text_input("Staff Password", type="password")
                 if st.form_submit_button("Enter Field Dashboard", use_container_width=True):
@@ -95,10 +94,9 @@ if not st.session_state["logged_in"]:
                     else:
                         st.error("❌ Staff Username ya Password galat hai!")
 
-        # TAB 2: OWNER ADMIN GATEWAY
         with tab_admin:
             with st.form("admin_login_form"):
-                st.caption("Main ISP Owner (Master Access Control) login gateway:")
+                st.caption("Main ISP Owner login gateway:")
                 a_user = st.text_input("Master Username")
                 a_pass = st.text_input("Master Password", type="password")
                 if st.form_submit_button("Authenticate Master Engine", use_container_width=True):
@@ -114,7 +112,6 @@ if not st.session_state["logged_in"]:
                     else:
                         st.error("❌ Owner credentials incorrect!")
 
-        # TAB 3: SIGNUP
         with tab_register:
             st.info("📢 Helplines for Master Keys: 0331-5336673 | 0321-5943786")
             with st.form("signup_master_form"):
@@ -133,12 +130,13 @@ if not st.session_state["logged_in"]:
                         }).execute()
                         st.success("🎉 Registry Complete! Log in via Admin Gate.")
 
-# --- LIVE INTERFACE (ROLES-ISOLATED ENVIRONMENT) ---
+# --- LIVE ENVIRONMENT ---
 else:
     my_isp_id = st.session_state["isp_id"]
     is_admin = (st.session_state["user_role"] == "Admin")
+    current_operator = st.session_state["operator_name"]
     
-    # 1. Action Matrix Row Design
+    # Action Matrix Row Design
     st.markdown("""
     <div class="action-row">
         <div class="action-card-btn">User/Dealer Application</div>
@@ -149,13 +147,13 @@ else:
     </div>
     """, unsafe_allow_html=True)
     
-    # --- SIDEBAR ACCESS MANAGEMENT ---
-    st.sidebar.markdown(f"### Mode: `{st.session_state['user_role']}` Control Panel")
+    # Sidebar Access Control
+    st.sidebar.markdown(f"### Mode: `{st.session_state['user_role']}` Panel")
     if st.sidebar.button("🔒 Secure Logout", use_container_width=True):
         st.session_state["logged_in"] = False
         st.rerun()
         
-    # BOTH ADMIN & STAFF CAN ADD CUSTOMERS (Field requirement)
+    # Both Staff & Admin can register entries
     with st.sidebar.expander("➕ Register New Customer Node", expanded=True):
         with st.form("add_user_form", clear_on_submit=True):
             n_name = st.text_input("Customer Full Name")
@@ -172,13 +170,12 @@ else:
                     }).execute()
                     st.rerun()
 
-    # ONLY ADMIN CAN REGISTER STAFF MEMBERS (LADKON KE ACCOUNT BANANA)
+    # Admin Only Tools
     if is_admin:
         with st.sidebar.expander("👥 Create Staff/Boy Accounts", expanded=False):
             with st.form("create_staff_form", clear_on_submit=True):
-                st.caption("Field boys ke liye alag username aur password yahan se banayein:")
                 st_name = st.text_input("Boy Full Name (e.g., Ali)")
-                st_user = st.text_input("Login Username ID (Unique)")
+                st_user = st.text_input("Login Username ID")
                 st_pass = st.text_input("Login Password")
                 if st.form_submit_button("Authorize Staff Member"):
                     if st_name and st_user and st_pass:
@@ -188,29 +185,27 @@ else:
                             }).execute()
                             st.sidebar.success(f"✔️ Account created for {st_name}!")
                         except:
-                            st.sidebar.error("❌ Username already taken.")
+                            st.sidebar.error("❌ Username taken.")
 
-        # ONLY ADMIN CAN RESET MONTHLY CYCLES
         st.sidebar.markdown("---")
-        if st.sidebar.button("🔄 Execute Month Reset (Roll Forward Bills)", use_container_width=True):
+        if st.sidebar.button("🔄 Execute Month Reset (Roll Bills)", use_container_width=True):
             users_raw = supabase.table("billing_users").select("*").eq("isp_id", my_isp_id).execute()
             for u in users_raw.data:
                 new_prev = float(u["previous_balance"]) + float(u["current_bill"]) if u["status"] == "Unpaid" else 0
                 supabase.table("billing_users").update({"previous_balance": new_prev, "status": "Unpaid"}).eq("id", u["id"]).execute()
-            st.sidebar.success("New Billing cycle advanced successfully!")
+            st.sidebar.success("New Billing cycle advanced!")
             st.rerun()
 
-    # --- MAIN VIEW INTERFACE HOOKS ---
+    # Data Pipeline Execution
     users_resp = supabase.table("billing_users").select("*").eq("isp_id", my_isp_id).order("name").execute()
     history_resp = supabase.table("billing_history").select("*").eq("isp_id", my_isp_id).execute()
     df_users = pd.DataFrame(users_resp.data)
     df_history = pd.DataFrame(history_resp.data)
 
-    # SECURE TABS CONFIGURATION
+    # Secure Tabs Isolation
     if is_admin:
         tab_summary, tab_areas, tab_history = st.tabs(["📊 Main Billing Directory", "📍 Area Grid Analytics", "📚 Annual Financial Ledgers"])
     else:
-        # STAFF CANNOT SEE SYSTEM FINANCIAL AUDIT LEDGERS
         tab_summary, tab_areas = st.tabs(["📊 Main Billing Directory", "📍 Area Grid Analytics"])
 
     with tab_summary:
@@ -221,7 +216,6 @@ else:
             paid_nodes = len(df_users[df_users['status'] == 'Paid'])
             unpaid_nodes = len(df_users[df_users['status'] == 'Unpaid'])
             
-            # Metrics Counters
             st.markdown(f"""
             <div class="metric-box-container">
                 <div class="metric-box"><div class="metric-box-title">👥 Active Subscriber Nodes</div><div class="metric-box-value">{total_nodes}</div></div>
@@ -230,10 +224,10 @@ else:
             </div>
             """, unsafe_allow_html=True)
             
-            st.markdown('<div class="table-section-heading">📋 CUSTOMER BILLING MATRIX</div>', unsafe_allow_html=True)
+            st.markdown('<div class="table-section-heading">📋 CUSTOMER BILLING MATRIX (DITTO SPREADSHEET)</div>', unsafe_allow_html=True)
             
-            # Table Row Layout Matching Wasooli PK mockup
-            ch1, ch2, ch3, ch4, ch5, ch6, ch7, ch8, ch9 = st.columns([0.6, 1.2, 1.5, 1.1, 1.1, 0.9, 0.9, 0.9, 1.3])
+            # Grid Layout matching Mockup
+            ch1, ch2, ch3, ch4, ch5, ch6, ch7, ch8, ch9 = st.columns([0.6, 1.2, 1.5, 1.1, 1.1, 0.9, 0.9, 0.9, 1.5])
             ch1.markdown("**CustID**")
             ch2.markdown("**Internet ID**")
             ch3.markdown("**Subscriber Name**")
@@ -249,10 +243,9 @@ else:
                 prev_val = float(row['previous_balance'])
                 curr_val = float(row['current_bill'])
                 total_due = prev_val + curr_val if row['status'] == 'Unpaid' else 0.0
-                
                 status_color = "green" if row['status'] == 'Paid' else "red"
                 
-                r1, r2, r3, r4, r5, r6, r7, r8, r9 = st.columns([0.6, 1.2, 1.5, 1.1, 1.1, 0.9, 0.9, 0.9, 1.3])
+                r1, r2, r3, r4, r5, r6, r7, r8, r9 = st.columns([0.6, 1.2, 1.5, 1.1, 1.1, 0.9, 0.9, 0.9, 1.5])
                 r1.write(f"#{row['id']}")
                 r2.write(row['username'])
                 r3.write(row['name'])
@@ -264,15 +257,17 @@ else:
                 
                 if row['status'] == 'Unpaid':
                     if r9.button("Receive Bill 💵", key=f"rec_{row['id']}", use_container_width=True):
-                        # Executing collection process pipeline
-                        supabase.table("billing_users").update({"status": "Paid", "last_paid_date": today_date}).eq("id", row['id']).execute()
+                        # Executing collection process pipeline with operator logging
+                        supabase.table("billing_users").update({"status": "Paid", "last_paid_date": today_date, "collected_by": current_operator}).eq("id", row['id']).execute()
                         supabase.table("billing_history").insert({
                             "isp_id": my_isp_id, "user_id": int(row['id']), "name": row['name'], "area": row['area'],
-                            "amount": total_due, "pay_date": today_date, "pay_month": current_month, "pay_year": current_year
+                            "amount": total_due, "pay_date": today_date, "pay_month": current_month, "pay_year": current_year,
+                            "collected_by": current_operator
                         }).execute()
                         st.rerun()
                 else:
-                    r9.markdown(f"<span style='color:green; font-size:12px;'>Settle: {row['last_paid_date']}</span>", unsafe_allow_html=True)
+                    collector_label = row.get('collected_by') if row.get('collected_by') else "Admin"
+                    r9.markdown(f"<span style='color:green; font-size:11px;'>By {collector_label}: {row['last_paid_date']}</span>", unsafe_allow_html=True)
                 
                 st.markdown("<hr style='margin: 0.2em 0px; opacity: 0.1;'>", unsafe_allow_html=True)
 
@@ -282,12 +277,12 @@ else:
             areas = ["All Nodes"] + list(df_users['area'].unique())
             sel_area = st.selectbox("Isolate operational view by area zone:", areas)
             filtered = df_users if sel_area == "All Nodes" else df_users[df_users['area'] == sel_area]
-            st.dataframe(filtered[['id', 'username', 'name', 'phone', 'area', 'status']], use_container_width=True)
+            st.dataframe(filtered[['id', 'username', 'name', 'phone', 'area', 'status', 'collected_by']], use_container_width=True)
 
     if is_admin:
         with tab_history:
-            st.markdown('<div class="table-section-heading">📚 FISCAL YEAR TRANSACTION AUDIT REGISTER (MASTER ONLY)</div>', unsafe_allow_html=True)
+            st.markdown('<div class="table-section-heading">📚 TRANSACTION AUDIT REGISTER (STAFF TRACKING ENABLED)</div>', unsafe_allow_html=True)
             if not df_history.empty:
-                st.dataframe(df_history[['name', 'area', 'amount', 'pay_date', 'pay_month', 'pay_year']].sort_index(ascending=False), use_container_width=True)
+                st.dataframe(df_history[['name', 'area', 'amount', 'pay_date', 'collected_by', 'pay_month', 'pay_year']].sort_index(ascending=False), use_container_width=True)
             else:
                 st.info("No commercial transactions logged yet.")
