@@ -21,6 +21,9 @@ current_month = datetime.now().strftime("%B")
 current_year = datetime.now().strftime("%Y")
 today_date = datetime.now().strftime("%Y-%m-%d")
 
+# --- MASTER APPROVAL CODE (LICENSE KEY) ---
+MASTER_APPROVAL_CODE = "LYNX-SECURE-2026"
+
 # --- SESSION STATE FOR LOGIN MANAGEMENT ---
 if "isp_logged_in" not in st.session_state:
     st.session_state["isp_logged_in"] = False
@@ -29,18 +32,16 @@ if "isp_id" not in st.session_state:
 if "isp_name" not in st.session_state:
     st.session_state["isp_name"] = ""
 
-# --- PORTAL GATEWAY (LOGIN / SIGNUP SCREEN - WITH LYNX FIBER BRANDING) ---
+# --- PORTAL GATEWAY (LOGIN / SIGNUP SCREEN) ---
 if not st.session_state["isp_logged_in"]:
     
     _, col_center, _ = st.columns([1, 1.8, 1])
     
     with col_center:
         st.markdown("<br>", unsafe_allow_html=True)
-        # Main top heading updated to LYNX Fiber
         st.markdown("<h1 style='text-align: center; color: #1E88E5; margin-bottom:0px;'>⚡ LYNX Fiber</h1>", unsafe_allow_html=True)
         st.markdown("<p style='text-align: center; font-size: 16px; letter-spacing: 2px;'><b>CLOUD BILLING PLATFORM FOR INTERNET PROVIDERS</b></p>", unsafe_allow_html=True)
         
-        # Tabs for Sign In and Register
         tab_login, tab_signup = st.tabs(["🔒 Sign In / Login", "📝 Register New ISP Account"])
         
         # --- TAB 1: LOGIN ---
@@ -54,7 +55,6 @@ if not st.session_state["isp_logged_in"]:
                 if btn_login:
                     if login_user and login_pass:
                         try:
-                            # Dynamic Cloud authentication
                             res = supabase.table("isp_companies").select("*").eq("username", login_user).eq("password", login_pass).execute()
                             if len(res.data) > 0:
                                 st.session_state["isp_logged_in"] = True
@@ -69,34 +69,41 @@ if not st.session_state["isp_logged_in"]:
                     else:
                         st.warning("⚠️ Dono khane bharna zaroori hain.")
 
-        # --- TAB 2: SIGN UP (Branded under LYNX Fiber Platform) ---
+        # --- TAB 2: SIGN UP (WITH YOUR CONTACT NUMBERS) ---
         with tab_signup:
+            # 📢 Custom Branded Notice with your provided numbers
+            st.info("📢 **Notice:** Agar aap is app par apni company ka billing setup register karna chahte hain, to approval code aur activation ke liye **LYNX Fiber** company se rabta karein.\n\n📞 **Contact Numbers:**\n* **0331-5336673**\n* **0321-5943786**")
+            
             with st.form("isp_signup_form"):
-                # Branded text update here
-                st.markdown("<p style='text-align: center; color: green;'>Apni Company ko LYNX Fiber Network par register karein</p>", unsafe_allow_html=True)
+                st.markdown("<p style='text-align: center; color: green; font-weight: bold;'>Create Your Isolated Billing Portal</p>", unsafe_allow_html=True)
                 new_isp_name = st.text_input("🏢 Company Name (e.g., Lynx Fiber Pvt Ltd)")
                 new_isp_user = st.text_input("👤 Desired Admin Username (Unique)")
                 new_isp_phone = st.text_input("📞 Phone / Contact Number")
                 new_isp_pass = st.text_input("🔒 Set Login Password", type="password")
+                
+                input_approval_code = st.text_input("🔑 Admin Approval Code / License Key", type="password", placeholder="Enter code received from LYNX Fiber")
+                
                 btn_signup = st.form_submit_button("Create My Billing Portal", use_container_width=True)
                 
                 if btn_signup:
-                    if new_isp_name and new_isp_user and new_isp_pass:
-                        try:
-                            signup_data = {
-                                "company_name": new_isp_name,
-                                "username": new_isp_user,
-                                "password": new_isp_pass,
-                                "phone": new_isp_phone
-                            }
-                            supabase.table("isp_companies").insert(signup_data).execute()
-                            st.success("🎉 Account Created Successfully! Ab Sign In wale tab par ja kar login karein.")
-                        except Exception:
-                            st.error("❌ Yeh Username pehle se maujood hai! Koi naya username rukhain.")
+                    if new_isp_name and new_isp_user and new_isp_pass and input_approval_code:
+                        if input_approval_code != MASTER_APPROVAL_CODE:
+                            st.error("❌ Invalid Approval Code! Aapko account banane ki ijazat nahi hai. Meherbani karke upar diye gaye numbers par LYNX Admin se rabta karke code hasil karein.")
+                        else:
+                            try:
+                                signup_data = {
+                                    "company_name": new_isp_name,
+                                    "username": new_isp_user,
+                                    "password": new_isp_pass,
+                                    "phone": new_isp_phone
+                                }
+                                supabase.table("isp_companies").insert(signup_data).execute()
+                                st.success("🎉 Account Created Successfully! Ab Sign In wale tab par ja kar login karein.")
+                            except Exception:
+                                st.error("❌ Yeh Username pehle se maujood hai! Koi naya username rukhain.")
                     else:
-                        st.warning("⚠️ Meherbani karke saari details lazmi bharein.")
+                        st.warning("⚠️ Meherbani karke saari details samet Approval Code lazmi bharein.")
                         
-        # Footer update to LYNX
         st.markdown("<p style='text-align: center; color: gray; font-size: 11px; margin-top: 20px;'>LYNX Fiber Cloud Infrastructure © 2026</p>", unsafe_allow_html=True)
 
 # --- LIVE ISOLATED ISP DASHBOARD (AFTER LOGGED IN) ---
@@ -104,7 +111,6 @@ else:
     my_isp_id = st.session_state["isp_id"]
     my_isp_name = st.session_state["isp_name"]
     
-    # Shows the specific ISP company name that logged in (e.g., Lynx Fiber or any other)
     st.title(f"⚡ {my_isp_name} - Control Panel")
     st.caption(f"Logged in securely | Powered by LYNX Fiber Core | Cycle: {current_month} {current_year}")
     st.markdown("---")
