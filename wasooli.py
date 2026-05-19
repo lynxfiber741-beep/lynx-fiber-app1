@@ -1,16 +1,15 @@
 import streamlit as st
 import sqlite3
 import pandas as pd
-from streamlit_option_menu import option_menu  # Professional Clean Nav Bar
 
 # ====================================================================
-# CONFIGURATION & GLOBAL DESIGN SETTINGS
+# 1. CORE APPLICATION CONFIGURATION
 # ====================================================================
 st.set_page_config(
     page_title="Lynx Fiber Pvt Ltd",
     page_icon="🌐",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed" # Real app ki tarah full screen experience
 )
 
 DB_FILE = "wasoolee_core_pro.db"
@@ -20,44 +19,10 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
-# --- PRECISE THEME REGULATION ---
-st.markdown("""
-    <style>
-        /* Top Navigation Header Blue Bar Match */
-        [data-testid="stHeader"] {
-            background-color: #0c7db1 !important;
-        }
-        /* Jet Black Clean Sidebar Background */
-        [data-testid="stSidebar"] {
-            background-color: #11151c !important;
-            border-right: 1px solid #1e293b !important;
-        }
-        /* Dashboard Custom Metric Counter Box Style */
-        .metric-card-box {
-            background-color: #1e293b;
-            border-radius: 8px;
-            padding: 22px 20px;
-            border: 1px solid #334155;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
-            margin-bottom: 10px;
-        }
-        .metric-label {
-            color: #94a3b8;
-            font-size: 14px;
-            font-weight: 500;
-            margin-bottom: 6px;
-        }
-        .val-users { color: #10b981; font-size: 32px; font-weight: 700; }
-        .val-recovered { color: #00e5ff; font-size: 32px; font-weight: 700; }
-        .val-outstanding { color: #ef4444; font-size: 32px; font-weight: 700; }
-    </style>
-""", unsafe_allow_html=True)
-
-
 # ====================================================================
-# BACKEND CORE SCHEMA INITIALIZATION
+# 2. DATABASE INITIALIZATION
 # ====================================================================
-def init_system_database():
+def init_db():
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute('''
@@ -71,57 +36,9 @@ def init_system_database():
     conn.commit()
     conn.close()
 
-init_system_database()
-current_company = "lynx_fiber"
+init_db()
 
-
-# ====================================================================
-# SIDEBAR DOCK: BRANDING & TRUE STREAMLIT OPTION MENU
-# ====================================================================
-with st.sidebar:
-    # Top Company Banner Profile Only (No Wasooli Text)
-    st.markdown("""
-        <div style="padding: 10px 5px 15px 5px; border-bottom: 1px solid #1e293b; margin-bottom: 15px;">
-            <div style="color: #00e5ff; font-size: 19px; font-weight: 700; letter-spacing: 0.5px;">🌐 Lynx Fiber Pvt Ltd</div>
-            <div style="color: #64748b; font-size: 12px; margin-top: 3px;">Role: ISP_OWNER Dashboard</div>
-        </div>
-    """, unsafe_allow_html=True)
-    
-    # Professional Left Vertical Menu Bar Component (Exact Layout Match)
-    menu_selection = option_menu(
-        menu_title=None,  # No raw generic header text
-        options=[
-            "Dashboard Summary",
-            "Users Profile Directory",
-            "Network Area Allocation",
-            "Transactions Ledger",
-            "Accounts & Recovery"
-        ],
-        icons=["speedometer2", "people", "geo-alt", "receipt", "wallet2"], # Modern system icons
-        menu_icon="cast",
-        default_index=0,
-        styles={
-            "container": {"padding": "0px", "background-color": "#11151c"},
-            "icon": {"color": "#94a3b8", "font-size": "15px"}, 
-            "nav-link": {
-                "font-size": "14px", 
-                "text-align": "left", 
-                "margin": "4px 0px", 
-                "color": "#94a3b8",
-                "background-color": "transparent"
-            },
-            "nav-link-selected": {"background-color": "#0c7db1", "color": "#ffffff", "font-weight": "600"},
-        }
-    )
-    
-    st.markdown("<br><hr style='border-color:#1e293b;'>", unsafe_allow_html=True)
-    if st.button("🔒 Secure Session Out", use_container_width=True):
-        st.cache_data.clear()
-
-
-# ====================================================================
-# MASTER AREA MODULE ROUTER
-# ====================================================================
+# Fetch Metrics
 conn = get_db_connection()
 cursor = conn.cursor()
 cursor.execute("SELECT meta_val FROM system_metadata WHERE meta_key='active_users'")
@@ -132,36 +49,232 @@ cursor.execute("SELECT meta_val FROM system_metadata WHERE meta_key='outstanding
 outstanding = float(cursor.fetchone()[0])
 conn.close()
 
-# MODULE 1: DASHBOARD ANALYTICS OVERVIEW
-if menu_selection == "Dashboard Summary":
-    st.markdown("<h2 style='color: #ffffff; font-weight: 700; margin-top:-15px;'>HELLO!! LYNX FIBER INTERNET</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='color: #64748b; margin-top:-12px; font-size:14px;'>Real-time network operational overview and financial status summaries.</p>", unsafe_allow_html=True)
-    
-    # Horizontal Panel Control Shortcut Buttons Layout Row
-    b1, b2, b3, b4 = st.columns(4)
-    b1.button("📥 User/Dealer Application", use_container_width=True)
-    b2.button("💾 BT Drivers Download", use_container_width=True)
-    b3.button("🔗 Copy Query Link", use_container_width=True)
-    b4.button("🧾 Download Monthly Bill", use_container_width=True)
-    
-    st.write("---")
-    st.markdown("#### 📈 Financial Counter Summary")
-    
-    # Counters Data Layout Matrix
-    card_c1, card_c2, card_c3 = st.columns(3)
-    with card_c1:
-        st.markdown(f'<div class="metric-card-box"><div class="metric-label">👤 Active Users</div><div class="val-users">{active_users:,}</div></div>', unsafe_allow_html=True)
-    with card_c2:
-        st.markdown(f'<div class="metric-card-box"><div class="metric-label">💵 Total Recovered</div><div class="val-recovered">PKR {total_recovered:,.0f}</div></div>', unsafe_allow_html=True)
-    with card_c3:
-        st.markdown(f'<div class="metric-card-box"><div class="metric-label">⚠️ Outstanding Ledger</div><div class="val-outstanding">PKR {outstanding:,.0f}</div></div>', unsafe_allow_html=True)
+# ====================================================================
+# 3. HIGH-FIDELITY BOOTSTRAP INTERFACE INJECTION
+# ====================================================================
+# Hum yahan custom pure HTML use kar rahe hain taaki Streamlit ka bikhra look mukammal khatam ho jaye.
 
-    st.write("---")
+# URL query string se menu change karne ka mechanism
+query_params = st.query_params
+if "menu" not in query_params:
+    st.query_params["menu"] = "dashboard"
+current_menu = st.query_params["menu"]
+
+st.markdown("""
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     
-    # Graphs Side-by-Side Display Row
+    <style>
+        /* Hide all default Streamlit branding, bars and wrapper spaces */
+        #MainMenu {visibility: hidden;}
+        footer {visibility: hidden;}
+        header {visibility: hidden;}
+        .block-container {padding: 0rem !important; max-width: 100% !important;}
+        [data-testid="stHeader"] {display: none !important;}
+        
+        /* Global Reset */
+        body {
+            background-color: #f4f6f9 !important;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+        }
+        
+        /* Layout Structure */
+        .app-wrapper {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        /* Sleek Left Sidebar Node Match */
+        .custom-sidebar {
+            width: 70px;
+            background-color: #111625;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 15px;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+            z-index: 100;
+        }
+        .sidebar-logo {
+            color: #00e5ff;
+            font-size: 24px;
+            margin-bottom: 30px;
+        }
+        .nav-item-link {
+            color: #64748b;
+            font-size: 20px;
+            margin-bottom: 22px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 100%;
+            text-align: center;
+            padding: 8px 0;
+            display: block;
+            text-decoration: none;
+        }
+        .nav-item-link:hover {
+            color: #00e5ff;
+        }
+        .nav-item-link.active-node {
+            color: #ffffff;
+            background-color: #1e293b;
+            border-left: 3px solid #00e5ff;
+        }
+        
+        /* Main Application Workspace */
+        .main-workspace {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: #f4f6f9;
+            overflow-y: auto;
+        }
+        
+        /* Premium Top Blue Navigation Strip */
+        .top-blue-strip {
+            background-color: #0c7db1;
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .company-brand-txt {
+            font-size: 16px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        
+        /* Workspace Margin Trimming */
+        .content-body {
+            padding: 20px;
+        }
+        
+        /* Compact Metrics Cards Layout Grid */
+        .kpi-card {
+            background: white;
+            border-radius: 6px;
+            padding: 15px 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            border-left: 4px solid #00e5ff;
+        }
+        .kpi-card.recovered-border { border-left-color: #10b981; }
+        .kpi-card.outstanding-border { border-left-color: #ef4444; }
+        
+        .kpi-title {
+            color: #64748b;
+            font-size: 13px;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+        .kpi-value {
+            font-size: 26px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-top: 5px;
+        }
+        
+        /* Action Shortcut Buttons Styling */
+        .action-btn-custom {
+            background-color: #ffffff;
+            color: #334155;
+            border: 1px solid #e2e8f0;
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 500;
+            border-radius: 4px;
+            transition: all 0.2s;
+            text-align: center;
+            width: 100%;
+            display: inline-block;
+        }
+        .action-btn-custom:hover {
+            background-color: #f8fafc;
+            border-color: #cbd5e1;
+            color: #0c7db1;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
+# ====================================================================
+# 4. DRAW THE EXACT STRUCTURAL VIEW INTERFACE
+# ====================================================================
+# Yahan hum left side bar aur top blue row render kar rahe hain.
+
+sidebar_html = f"""
+<div class="app-wrapper">
+    <div class="custom-sidebar">
+        <div class="sidebar-logo"><i class="bi bi-globe"></i></div>
+        <a href="?menu=dashboard" class="nav-item-link {'active-node' if current_menu == 'dashboard' else ''}" title="Dashboard"><i class="bi bi-speedometer2"></i></a>
+        <a href="?menu=users" class="nav-item-link {'active-node' if current_menu == 'users' else ''}" title="Users"><i class="bi bi-people"></i></a>
+        <a href="?menu=network" class="nav-item-link {'active-node' if current_menu == 'network' else ''}" title="Network Systems"><i class="bi bi-geo-alt"></i></a>
+        <a href="?menu=ledger" class="nav-item-link {'active-node' if current_menu == 'ledger' else ''}" title="Ledger"><i class="bi bi-receipt"></i></a>
+        <a href="?menu=accounts" class="nav-item-link {'active-node' if current_menu == 'accounts' else ''}" title="Recovery"><i class="bi bi-wallet2"></i></a>
+    </div>
+    
+    <div class="main-workspace">
+        <div class="top-blue-strip">
+            <div class="company-brand-txt">🌐 LYNX FIBER PVT LTD</div>
+            <div style="font-size: 13px;"><i class="bi bi-person-circle"></i> Role: ISP_OWNER</div>
+        </div>
+"""
+st.markdown(sidebar_html, unsafe_allow_html=True)
+
+# Container Body Open
+st.markdown('<div class="content-body">', unsafe_allow_html=True)
+
+# ROUTER BLOCK FOR VIEWS
+if current_menu == "dashboard":
+    # Greeting Block Header
+    st.markdown("""
+        <div class="mb-4">
+            <h4 class="mb-1" style="color:#1e293b; font-weight:700;">HELLO!! LYNX FIBER INTERNET</h4>
+            <p style="color:#64748b; font-size:13px; margin:0;">Real-time network operational overview and financial status summaries.</p>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    # Grid Row of Dashboard Top Buttons Shortcuts
+    st.markdown("""
+        <div class="row g-2 mb-4">
+            <div class="col-md-3"><div class="action-btn-custom"><i class="bi bi-download"></i> User/Dealer Application</div></div>
+            <div class="col-md-3"><div class="action-btn-custom"><i class="bi bi-hdd-network"></i> BT Drivers Download</div></div>
+            <div class="col-md-3"><div class="action-btn-custom"><i class="bi bi-link-45deg"></i> Copy Query Link</div></div>
+            <div class="col-md-3"><div class="action-btn-custom"><i class="bi bi-file-earmark-text"></i> Download Monthly Bill</div></div>
+        </div>
+        <h6 class="mb-3" style="color:#475569; font-weight:600;">📊 Financial Counter Summary</h6>
+    """, unsafe_allow_html=True)
+    
+    # Core Summary Grid Boxes Match (Compact Cards Style)
+    st.markdown(f"""
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <div class="kpi-card">
+                    <div class="kpi-title">👤 Active Users</div>
+                    <div class="kpi-value">{active_users:,}</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="kpi-card recovered-border">
+                    <div class="kpi-title">💵 Total Recovered</div>
+                    <div class="kpi-value">PKR {total_recovered:,.0f}</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="kpi-card outstanding-border">
+                    <div class="kpi-title">⚠️ Outstanding Ledger</div>
+                    <div class="kpi-value">PKR {outstanding:,.0f}</div>
+                </div>
+            </div>
+        </div>
+        <hr style="border-color:#cbd5e1;">
+    """, unsafe_allow_html=True)
+    
+    # Graphs Data Workspace Render Area
     g1, g2 = st.columns(2)
     with g1:
-        st.markdown("##### 📊 Last 6 Month Receiving")
+        st.markdown("<span style='color:#475569; font-weight:600; font-size:14px;'>📊 Last 6 Month Receiving</span>", unsafe_allow_html=True)
         chart_data_1 = pd.DataFrame({
             'Month': ['Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May'],
             'Recovered Amount': [0, 0, 3000, 1193440, 588300, 209300]
@@ -169,33 +282,27 @@ if menu_selection == "Dashboard Summary":
         st.bar_chart(chart_data_1.set_index("Month"), y="Recovered Amount", color="#0c7db1", use_container_width=True)
         
     with g2:
-        st.markdown("##### 🎯 Users Package Wise Matrix")
+        st.markdown("<span style='color:#475569; font-weight:600; font-size:14px;'>🎯 Users Package Wise Matrix</span>", unsafe_allow_html=True)
         chart_data_2 = pd.DataFrame({
             'Package': ['12MB', '15MB', '10MB', '9MB K', '12MB TW', '9MB E', '12MB E'],
             'Total Users': [385, 9, 34, 341, 41, 79, 37]
         })
         st.bar_chart(chart_data_2.set_index("Package"), y="Total Users", color="#10b981", use_container_width=True)
 
-# MODULE 2: SUBSCRIBER MANAGEMENT MODULE
-elif menu_selection == "Users Profile Directory":
-    st.markdown("<h3 style='color: #00e5ff;'>👤 Subscriber Management Protocol</h3>", unsafe_allow_html=True)
-    
-    with st.form("sub_reg_form"):
-        c1, c2 = st.columns(2)
-        with c1:
-            cust_id = st.text_input("Account ID (Unique Custom Code)")
-            name = st.text_input("Subscriber Name")
-        with c2:
-            cell = st.text_input("Active Contact Number")
-            srv_type = st.selectbox("Connection Type Profile", ["Internet", "Cable", "Both"])
-            
-        st.markdown("##### Financial Tariff Rates Allocation")
-        rate_net = st.number_input("Monthly Internet Bill Allocation (PKR)", min_value=0)
-        
-        if st.form_submit_button("⚡ Append Node to Cloud Central Database"):
-            if cust_id and name:
-                st.success(f"Success Account Node built cleanly for: {name}")
+elif current_menu == "users":
+    st.markdown("<h4 style='color: #0c7db1; font-weight:700;'>👤 Subscriber Master Protocol</h4><br>", unsafe_allow_html=True)
+    # Streamlit elements can blend seamlessly into forms when structured in rows
+    with st.form("sub_form"):
+        r1, r2 = st.columns(2)
+        r1.text_input("Internet User ID / Custom Account ID")
+        r1.text_input("Subscriber Name")
+        r2.text_input("Active Mobile Number")
+        r2.selectbox("Connection Profile Type", ["Internet", "Cable", "Both"])
+        st.form_submit_button("⚡ Append Record to Core Node")
 
 else:
-    st.markdown(f"<h3 style='color: #00e5ff;'>⚙️ Management Terminal Profile: {menu_selection}</h3>", unsafe_allow_html=True)
-    st.info("Central system data stream verified. Relational rows loaded accurately.")
+    st.markdown(f"<h4 style='color: #0c7db1;'>⚙️ System Module Cluster Active</h4>", unsafe_allow_html=True)
+    st.info(f"Dynamic view initialized for option node parameter. Relational framework links running safe.")
+
+# Closures for layout HTML wrappers
+st.markdown('</div></div></div>', unsafe_allow_html=True)
