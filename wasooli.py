@@ -113,3 +113,114 @@ def build_wasoolee_tables():
 # Execute Database initialization on run
 build_wasoolee_tables()
 st.success("⚡ Step 1 Completed: Multi-Tenant Schema Initialized Successfully!")
+# ====================================================================
+# STEP 2: SECURE MULTI-TENANT LOGIN ENGINE (SUPER ADMIN / ISP / STAFF)
+# ====================================================================
+
+# Session state initialize karein agar pehle se nahi hai
+if "auth_session" not in st.session_state:
+    st.session_state["auth_session"] = {
+        "is_logged_in": False,
+        "role": None,          # 'super_admin', 'isp_owner', 'staff'
+        "company_id": None,    # e.g., 'lynx_fiber'
+        "company_name": None,  # For UI Display
+        "staff_id": None,      # Staff identification tracking
+        "allocated_area": None # Staff restrictive view mapping
+    }
+
+def process_login(username, password):
+    # 1. Check for Super Admin (Platform Owner / LogicLabs View)
+    if username == "superadmin" and password == "wasooli786":
+        st.session_state["auth_session"] = {
+            "is_logged_in": True,
+            "role": "super_admin",
+            "company_id": "saas_master",
+            "company_name": "SaaS Global Master Control",
+            "staff_id": None,
+            "allocated_area": None
+        }
+        return True, "Welcome Creator! Access Granted to Master System Console."
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # 2. Check for ISP Tenant Login (e.g., lynxadmin)
+    cursor.execute("""
+        SELECT * FROM saas_companies 
+        WHERE admin_username=? AND admin_password=?
+    """, (username, password))
+    isp_match = cursor.fetchone()
+
+    if isp_match:
+        if isp_match["status"] != "Active":
+            conn.close()
+            return False, "Access Suspended! Please clear your SaaS license dues."
+        
+        st.session_state["auth_session"] = {
+            "is_logged_in": True,
+            "role": "isp_owner",
+            "company_id": isp_match["company_id"],
+            "company_name": isp_match["company_name"],
+            "staff_id": None,
+            "allocated_area": None
+        }
+        conn.close()
+        return True, f"Login Successful! Connected to {isp_match['company_name']} Node."
+
+    # 3. Check for Field Recovery Staff Login
+    cursor.execute("""
+        SELECT s.*, c.company_name, c.status as company_status 
+        FROM recovery_staff s
+        JOIN saas_companies c ON s.company_id = c.company_id
+        WHERE s.username=? AND s.password=? AND s.status='Active'
+    """, (username, password))
+    staff_match = cursor.fetchone()
+    conn.close()
+
+    if staff_match:
+        if staff_match["company_status"] != "Active":
+            return False, "Parent ISP Company is currently suspended by SaaS Master."
+        
+        st.session_state["auth_session"] = {
+            "is_logged_in": True,
+            "role": "staff",
+            "company_id": staff_match["company_id"],
+            "company_name": staff_match["company_name"],
+            "staff_id": staff_match["staff_id"],
+            "allocated_area": staff_match["allocated_area_id"]
+        }
+        return True, f"Staff Access Granted. Welcome back, {staff_match['staff_name']}."
+
+    return False, "Access Refused: Invalid credentials or account blocked by system."
+
+
+# --- LOGIN USER INTERFACE SCREEN ---
+if not st.session_state["auth_session"]["is_logged_in"]:
+    st.write("---")
+    st.markdown("<h2 style='text-align: center; color: #00f0ff;'>🔒 WASOOLEE ENTERPRISE PORTAL LOG IN</h2>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #8b949e;'>Multi-Tenant Telecom Billing & Field Recovery Node</p>", unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns([1, 1.5, 1])
+    with col2:
+        with st.form("wasoolee_login_form"):
+            input_user = st.text_input("Username / Admin ID / Staff ID").strip()
+            input_pass = st.text_input("Security Passcode", type="password").strip()
+            submit_btn = st.form_submit_button("Authenticate & Connect")
+            
+            if submit_btn:
+                success, msg = process_login(input_user, input_pass)
+                if success:
+                    st.success(msg)
+                    st.rerun()
+                else:
+                    st.error(msg)
+    st.stop() # Prevents further code execution if user is not logged in
+
+# --- APP NAVIGATION BAR (Showed after login) ---
+st.sidebar.markdown(f"<h3 style='color:#00f0ff;'>🌐 {st.session_state['auth_session']['company_name']}</h3>", unsafe_allow_html=True)
+st.sidebar.write(f"Authenticated Role: **{st.session_state['auth_session']['role'].upper()}**")
+st.sidebar.write("---")
+
+if st.sidebar.button("🔒 Secure Log Out", use_container_width=True):
+    st.session_state["auth_session"] = {"is_logged_in": False, "role": None, "company_id": None, "company_name": None, "staff_id": None, "allocated_area": None}
+    st.rerun()
