@@ -98,7 +98,7 @@ def trigger_whatsapp_alert(row, template_type, area):
     return f"https://wa.me/{row['Phone']}?text={urllib.parse.quote(msg)}"
 
 
-# ==================== VIEW 1: STAFF DASHBOARD (Strict Area Lock + Inventory Consume) ====================
+# ==================== VIEW 1: STAFF DASHBOARD ====================
 if st.session_state["login_state"]["role"] == "Staff":
     user_area = st.session_state["login_state"]["assigned_area"]
     st.title(f"📱 Field Deployment Terminal | Zone: {user_area}")
@@ -133,7 +133,6 @@ if st.session_state["login_state"]["role"] == "Staff":
                             st.info("No logs on record.")
                             
                 with col_actions:
-                    # Advanced Multi-Template Selector
                     alert_mode = st.selectbox("Select Alert Type", ["Regular Bill Alert", "🚨 Service Expiry Cutoff", "✅ Payment Received Receipt"], key=f"tpl_{row['ID']}")
                     wa_url = trigger_whatsapp_alert(row, alert_mode, user_area)
                     st.markdown(f'[@📲 Send WhatsApp Message]({wa_url})', unsafe_allow_html=True)
@@ -178,7 +177,9 @@ else:
     with tab_overview:
         st.subheader("🚨 Real-time Global Disconnection Requests")
         expired_master = df_subs[df_subs["Expiry"] < today_str]
-        if not expired_master.empty():
+        
+        # FIXED: Yahan se brackets '()' hata diye hain taaki error na aaye
+        if not expired_master.empty:
             st.error(f"Alert: {len(expired_master)} connections are currently expired across all network segments!")
             st.dataframe(expired_master[["ID", "Name", "Area", "Package", "Expiry", "OLT_PON"]], use_container_width=True, hide_index=True)
         else:
@@ -226,7 +227,7 @@ else:
         if not df_exp.empty:
             st.dataframe(df_exp, use_container_width=True, hide_index=True)
 
-    # ADVANCED TAB 4: STAFF CREATION WITH GRID COUPLING
+    # ADVANCED TAB 4: STAFF CREATION
     with tab_staff_mgmt:
         st.subheader("👥 System User Accounts Deployment")
         with st.form("create_staff_form", clear_on_submit=True):
@@ -245,7 +246,7 @@ else:
         st.subheader("Active System Access Registries")
         st.dataframe(pd.DataFrame(st.session_state["staff_registry"]), use_container_width=True, hide_index=True)
 
-    # ADVANCED TAB 5: PROVISION NEW NODE WITH PORT SEGMENTATION
+    # ADVANCED TAB 5: PROVISION NEW NODE
     with tab_cust:
         st.subheader("➕ Provision New Fiber Loop Client Link")
         with st.form("admin_cust_form", clear_on_submit=True):
@@ -260,7 +261,6 @@ else:
             c_olt = st.text_input("OLT Box & PON Port Assignment ID (e.g. OLT-02_PON-4)")
             c_splitter = st.text_input("Splitter Box Location Reference (e.g. 1:8-Spl_SectorG)")
             
-            # Auto Hardware Consumption Selection
             consume_onu = st.checkbox("Automatically deduct 1 ONU asset unit from Inventory Stock", value=True)
             
             if st.form_submit_button("Provision and Active Broadband Link"):
