@@ -1,304 +1,280 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
-from supabase import create_client, Client
+import urllib.parse
 
-# --- DITTO WASOOLI PK - LYNX FIBER PRODUCTION ENGINE ---
-st.set_page_config(page_title="LYNX Fiber - Advanced ISP Portal", layout="wide", page_icon="⚡")
+st.set_page_config(page_title="Lynx Fiber Pvt Ltd - Enterprise Master Node", layout="wide")
 
-# Custom Professional UI/CSS Injection
-st.markdown("""
-<style>
-    .block-container { padding-top: 40px !important; padding-bottom: 0px !important; max-width: 100% !important; background-color: #f8fafc; }
-    [data-testid="stHeader"] { background-color: rgba(0,0,0,0) !important; background: transparent !important; }
+# ==================== 1. ADVANCED DATABASE ARCHITECTURE ====================
+if "areas_list" not in st.session_state:
+    st.session_state["areas_list"] = ["Sanghoi", "Saeela", "Jhelum Center"]
+
+# Advanced Device Inventory Stock Database
+if "inventory_db" not in st.session_state:
+    st.session_state["inventory_db"] = {"XPON_ONUs": 45, "Cat6_Rolls": 12, "Fiber_Splitters": 8, "Mikrotik_Routers": 15}
+
+# System Accounts Registry
+if "staff_registry" not in st.session_state:
+    st.session_state["staff_registry"] = [
+        {"Username": "ali123", "Password": "1122", "Area": "Sanghoi", "Name": "Ali Raza (Field Staff)"},
+        {"Username": "usman456", "Password": "4455", "Area": "Saeela", "Name": "Usman Khan (Field Staff)"}
+    ]
+
+# Subscriber Master Database with OLT & PON Mapping
+if "customers_master" not in st.session_state:
+    st.session_state["customers_master"] = [
+        {"ID": "LX-101", "Name": "Zahid Mehmood", "Phone": "+923001234567", "Area": "Sanghoi", "Package": "10 Mbps", "Tariff": 1500, "Created_At": "2025-06-10", "Expiry": "2026-05-15", "OLT_PON": "OLT-01_PON-3", "Splitter": "1:8-Spl_02"},
+        {"ID": "LX-102", "Name": "Raja Naeem", "Phone": "+923129876543", "Area": "Saeela", "Package": "20 Mbps", "Tariff": 2500, "Created_At": "2025-11-01", "Expiry": "2026-05-28", "OLT_PON": "OLT-02_PON-1", "Splitter": "1:16-Spl_01"},
+        {"ID": "LX-103", "Name": "Malik Zain", "Phone": "+923215551234", "Area": "Sanghoi", "Package": "15 Mbps", "Tariff": 2000, "Created_At": "2026-01-15", "Expiry": "2026-05-02", "OLT_PON": "OLT-01_PON-4", "Splitter": "1:8-Spl_05"}
+    ]
+
+# Continuous 1-Year Payment History Logs
+if "payment_logs" not in st.session_state:
+    st.session_state["payment_logs"] = [
+        {"ID": "LX-101", "Pay_Date": "2026-04-12", "Amount": 1500, "For_Month": "April 2026", "Collector": "ali123"}
+    ]
+
+# Network Operation Expense Logs
+if "expense_logs" not in st.session_state:
+    st.session_state["expense_logs"] = [
+        {"Desc": "Fuel for Generator (Load Shedding)", "Amount": 3500, "Date": "2026-05-10"},
+        {"Desc": "Fiber Patching Splicing Wire", "Amount": 1200, "Date": "2026-05-14"}
+    ]
+
+# ==================== 2. APPLICATION AUTHENTICATION GATEWAY ====================
+if "login_state" not in st.session_state:
+    st.session_state["login_state"] = {"logged_in": False, "role": None, "username": None, "assigned_area": None}
+
+if not st.session_state["login_state"]["logged_in"]:
+    st.title("📲 Lynx Fiber Pvt Ltd - Core Enterprise Panel")
+    st.subheader("Automated Fiber Billing & Infrastructure Management System")
     
-    .wasooli-header {
-        background-color: #0284c7 !important; color: white !important; padding: 15px 30px;
-        display: flex; justify-content: space-between; align-items: center; width: 100%;
-        font-family: 'Arial', sans-serif; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border-bottom: 3px solid #0369a1; margin-bottom: 20px; border-radius: 4px;
-    }
-    .wasooli-brand { font-size: 22px; font-weight: bold; letter-spacing: 0.5px; }
-    .wasooli-role-badge { background-color: white; color: #0284c7; padding: 6px 16px; border-radius: 4px; font-weight: bold; font-size: 13px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.2); }
-    
-    .screenshot-metrics {
-        display: flex; justify-content: space-around; align-items: center; 
-        background: white; padding: 20px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-        margin-bottom: 30px; border: 1px solid #e2e8f0; text-align: center;
-    }
-    .metric-item { flex: 1; font-family: 'Arial', sans-serif; }
-    .metric-num { font-size: 30px; font-weight: bold; color: #0f172a; }
-    .metric-sub-green { font-size: 12px; color: #16a34a; font-weight: bold; margin-top: 2px; }
-    .metric-sub-red { font-size: 12px; color: #dc2626; font-weight: bold; margin-top: 2px; }
-    
-    .screenshot-section-title {
-        font-size: 20px; font-weight: bold; color: #1e293b; margin-top: 25px; margin-bottom: 15px;
-        font-family: 'Arial', sans-serif; border-left: 5px solid #0284c7; padding-left: 10px;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# --- DATABASE LAYER CONFIG ---
-SUPABASE_URL = st.secrets["SUPABASE_URL"]
-SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
-
-@st.cache_resource
-def init_supabase(): return create_client(SUPABASE_URL, SUPABASE_KEY)
-supabase: Client = init_supabase()
-
-# Live Operational Date Control
-current_month = datetime.now().strftime("%B")
-current_year = datetime.now().strftime("%Y")
-today_str = datetime.now().strftime("%Y-%m-%d")
-today_date = datetime.now().date()
-
-# Session Verification States
-if "logged_in" not in st.session_state: st.session_state["logged_in"] = False
-if "user_role" not in st.session_state: st.session_state["user_role"] = None  
-if "isp_id" not in st.session_state: st.session_state["isp_id"] = None
-if "isp_name" not in st.session_state: st.session_state["isp_name"] = ""
-if "operator_name" not in st.session_state: st.session_state["operator_name"] = ""
-if "branding_mode" not in st.session_state: st.session_state["branding_mode"] = "Lynx Branding"
-
-# Top Dynamic Branding Bar
-if st.session_state["logged_in"]:
-    display_title = st.session_state["isp_name"].upper() if st.session_state["branding_mode"] == "Own Branding" else "LYNX FIBER INTERNET"
-    role_text = f"👤 {st.session_state['operator_name'].upper()} ({st.session_state['user_role'].upper()})"
-    st.markdown(f'<div class="wasooli-header"><div class="wasooli-brand">🌐 HELLO!! {display_title}</div><div class="wasooli-role-badge">{role_text}</div></div>', unsafe_allow_html=True)
-else:
-    st.markdown('<div class="wasooli-header"><div class="wasooli-brand">⚡ LYNX FIBER ADVANCED SYSTEM</div><div class="wasooli-role-badge">🔒 ACCESS SECURED</div></div>', unsafe_allow_html=True)
-
-# Security Gateway
-if not st.session_state["logged_in"]:
-    _, col_center, _ = st.columns([1, 1.8, 1])
-    with col_center:
-        st.markdown("<br>", unsafe_allow_html=True)
-        tab_staff, tab_admin = st.tabs(["📲 Field Staff Login", "🔒 Owner/Admin Gate"])
+    with st.form("login_form"):
+        user_input = st.text_input("Access Identity / Username").strip()
+        pass_input = st.text_input("Security PIN / Password", type="password").strip()
+        submit_login = st.form_submit_button("Authenticate Node")
         
-        with tab_staff:
-            with st.form("staff_login_form"):
-                s_user = st.text_input("Staff Username ID")
-                s_pass = st.text_input("Staff Password", type="password")
-                if st.form_submit_button("Enter Field Dashboard", use_container_width=True):
-                    res = supabase.table("isp_staff").select("*, isp_companies(company_name, branding_mode)").eq("username", s_user).eq("password", s_pass).execute()
-                    if len(res.data) > 0:
-                        st.session_state["logged_in"] = True; st.session_state["user_role"] = "Staff"
-                        st.session_state["isp_id"] = res.data[0]["isp_id"]; st.session_state["operator_name"] = res.data[0]["staff_name"]
-                        st.session_state["isp_name"] = res.data[0]["isp_companies"]["company_name"]
-                        st.session_state["branding_mode"] = res.data[0]["isp_companies"].get("branding_mode", "Lynx Branding")
-                        st.rerun()
-                    else: st.error("❌ Staff Credentials Error.")
+        if submit_login:
+            if user_input == "admin" and pass_input == "admin786":
+                st.session_state["login_state"] = {"logged_in": True, "role": "Admin", "username": "Admin", "assigned_area": "All"}
+                st.success("Master System Cleared. Syncing Dashboard...")
+                st.rerun()
+            else:
+                staff_match = next((s for s in st.session_state["staff_registry"] if s["Username"] == user_input and s["Password"] == pass_input), None)
+                if staff_match:
+                    st.session_state["login_state"] = {
+                        "logged_in": True, "role": "Staff", "username": staff_match["Username"], "assigned_area": staff_match["Area"]
+                    }
+                    st.success(f"Welcome {staff_match['Name']}. Operational View Synchronized.")
+                    st.rerun()
+                else:
+                    st.error("Access Forbidden: Credentials Not Validated in Registries!")
+    st.stop()
 
-        with tab_admin:
-            with st.form("admin_login_form"):
-                a_user = st.text_input("Master Username")
-                a_pass = st.text_input("Master Password", type="password")
-                if st.form_submit_button("Authenticate Master Engine", use_container_width=True):
-                    res = supabase.table("isp_companies").select("*").eq("username", a_user).eq("password", a_pass).execute()
-                    if len(res.data) > 0:
-                        st.session_state["logged_in"] = True; st.session_state["user_role"] = "Admin"
-                        st.session_state["isp_id"] = res.data[0]["id"]; st.session_state["operator_name"] = "Admin"
-                        st.session_state["isp_name"] = res.data[0]["company_name"]
-                        st.session_state["branding_mode"] = res.data[0].get("branding_mode", "Lynx Branding")
-                        st.rerun()
-                    else: st.error("❌ Owner Credentials Error.")
+# DataFrames Formatting
+df_subs = pd.DataFrame(st.session_state["customers_master"])
+df_logs = pd.DataFrame(st.session_state["payment_logs"])
+df_exp = pd.DataFrame(st.session_state["expense_logs"])
+today_str = datetime.now().strftime("%Y-%m-%d")
 
-# --- LIVE OPERATIONS INTERFACE ---
-else:
-    my_isp_id = st.session_state["isp_id"]
-    is_admin = (st.session_state["user_role"] == "Admin")
-    current_operator = st.session_state["operator_name"]
+# Sidebar Configuration Control
+st.sidebar.title("🏢 Lynx Fiber Inc.")
+st.sidebar.write(f"Identity: **{st.session_state['login_state']['username']}**")
+st.sidebar.write(f"Clearance Scope: **{st.session_state['login_state']['assigned_area']}**")
+if st.sidebar.button("🔒 Secure Session Logout", use_container_width=True):
+    st.session_state["login_state"] = {"logged_in": False, "role": None, "username": None, "assigned_area": None}
+    st.rerun()
+st.sidebar.write("---")
+
+# WHATSAPP TEMPLATE ENGINE HELPER
+def trigger_whatsapp_alert(row, template_type, area):
+    if template_type == "Regular Bill Alert":
+        msg = f"Dear Customer {row['Name']},\nYour Lynx Fiber internet subscription on {area} is due.\nMonthly Package Charges: {row['Tariff']} PKR.\nExpiry Deadline: {row['Expiry']}.\nKindly settle your bill to avoid speed caps.\nThank you!"
+    elif template_type == "🚨 Service Expiry Cutoff":
+        msg = f"URGENT NOTICE!\nDear Customer {row['Name']},\nYour broadband connection link has EXPIRED on `{row['Expiry']}`.\nYour network service line is marked for automatic system cutoff. Please pay {row['Tariff']} PKR immediately to restore internet data access.\nLynx Fiber Team."
+    elif template_type == "✅ Payment Received Receipt":
+        msg = f"Payment Confirmed!\nThank you Customer {row['Name']}.\nWe have successfully received your monthly subscription payment of {row['Tariff']} PKR.\nYour Lynx Fiber node line is extended and running active.\nInvoice Date: {datetime.now().strftime('%Y-%m-%d')}."
     
-    # --- AUTOMATIC 30-DAYS EXPIRY ENGINE ---
-    raw_users_check = supabase.table("billing_users").select("*").eq("isp_id", my_isp_id).execute()
-    if len(raw_users_check.data) > 0:
-        for u in raw_users_check.data:
-            user_expiry = datetime.strptime(u["expiry_date"], "%Y-%m-%d").date()
-            if today_date > user_expiry and u["status"] == "Paid":
-                new_expiry = user_expiry + timedelta(days=30)
-                updated_prev_balance = float(u["previous_balance"] if u["previous_balance"] else 0) + float(u["current_bill"] if u["current_bill"] else 0)
-                
-                supabase.table("billing_users").update({
-                    "status": "Unpaid",
-                    "previous_balance": updated_prev_balance,
-                    "expiry_date": str(new_expiry)
-                }).eq("id", u["id"]).execute()
+    return f"https://wa.me/{row['Phone']}?text={urllib.parse.quote(msg)}"
+
+
+# ==================== VIEW 1: STAFF DASHBOARD (Strict Area Lock + Inventory Consume) ====================
+if st.session_state["login_state"]["role"] == "Staff":
+    user_area = st.session_state["login_state"]["assigned_area"]
+    st.title(f"📱 Field Deployment Terminal | Zone: {user_area}")
+    
+    # Stock Check for Field Boys
+    st.sidebar.subheader("📦 Available Field Materials")
+    for item, qty in st.session_state["inventory_db"].items():
+        st.sidebar.write(f"{item.replace('_', ' ')}: `{qty}`")
+        
+    df_staff_view = df_subs[df_subs["Area"] == user_area]
+    
+    if df_staff_view.empty:
+        st.warning("No linked subscriber loops found in this grid.")
+    else:
+        for idx, row in df_staff_view.iterrows():
+            is_dead = row["Expiry"] < today_str
+            status_banner = "🚨 SUSPENDED LINK" if is_dead else "🟢 FIBER LINK ACTIVE"
+            
+            with st.container(border=True):
+                col_info, col_actions = st.columns([3, 1])
+                with col_info:
+                    st.markdown(f"### {row['Name']} `[ID: {row['ID']}]`")
+                    st.write(f"Package Profile: **{row['Package']}** | Fees: **{row['Tariff']} PKR** | Target Expiry: `{row['Expiry']}`")
+                    st.markdown(f"**Hardware Port Mapping:** Location: `{row['OLT_PON']}` | Block Splitter: `{row['Splitter']}`")
+                    st.markdown(f"Link Diagnostics Status: **{status_banner}**")
+                    
+                    with st.expander("🕒 Historical Payment Sheets (1-Year)"):
+                        c_logs = df_logs[df_logs["ID"] == row["ID"]]
+                        if not c_logs.empty():
+                            st.dataframe(c_logs[["Pay_Date", "For_Month", "Amount"]], use_container_width=True, hide_index=True)
+                        else:
+                            st.info("No logs on record.")
+                            
+                with col_actions:
+                    # Advanced Multi-Template Selector
+                    alert_mode = st.selectbox("Select Alert Type", ["Regular Bill Alert", "🚨 Service Expiry Cutoff", "✅ Payment Received Receipt"], key=f"tpl_{row['ID']}")
+                    wa_url = trigger_whatsapp_alert(row, alert_mode, user_area)
+                    st.markdown(f'[@📲 Send WhatsApp Message]({wa_url})', unsafe_allow_html=True)
+                    st.write("")
+                    
+                    if st.button("Collect & Renew Cycle", key=f"st_pay_{row['ID']}", use_container_width=True):
+                        new_expiry = (datetime.now().date() + timedelta(days=30)).strftime("%Y-%m-%d")
+                        for sub in st.session_state["customers_master"]:
+                            if sub["ID"] == row["ID"]:
+                                sub["Expiry"] = new_expiry
+                        st.session_state["payment_logs"].append({
+                            "ID": row["ID"], "Pay_Date": today_str, "Amount": row["Tariff"], "For_Month": datetime.now().strftime("%B %Y"), "Collector": st.session_state["login_state"]["username"]
+                        })
+                        st.success("Database Renewed!")
+                        st.rerun()
+
+# ==================== VIEW 2: ADMIN MASTER CORE CONTROL CENTER ====================
+else:
+    st.title("🏢 Lynx Fiber Pvt Ltd - Centralized Enterprise Operations")
+    
+    # Financial Analytics Calculation Panel
+    total_gross_revenue = df_logs["Amount"].sum()
+    total_expenses = df_exp["Amount"].sum() if not df_exp.empty else 0
+    net_profit = total_gross_revenue - total_expenses
+    
+    col_m1, col_m2, col_m3 = st.columns(3)
+    col_m1.metric("Gross Collections (PKR)", f"{total_gross_revenue} /-")
+    col_m2.metric("Total Operational Expenses", f"{total_expenses} /-")
+    col_m3.metric("Net Clean Profits", f"{net_profit} /-")
+    
+    st.write("---")
+    
+    tab_overview, tab_inventory, tab_expenses, tab_staff_mgmt, tab_cust = st.tabs([
+        "📢 Central Monitor & Notifications", 
+        "📦 Hardware Stock Inventory",
+        "💸 Business Expense Tracker",
+        "👥 Staff & Grid Assignment", 
+        "➕ Provision New Node Connection"
+    ])
+    
+    # ADVANCED TAB 1: CENTRAL NOTIFICATIONS HUB
+    with tab_overview:
+        st.subheader("🚨 Real-time Global Disconnection Requests")
+        expired_master = df_subs[df_subs["Expiry"] < today_str]
+        if not expired_master.empty():
+            st.error(f"Alert: {len(expired_master)} connections are currently expired across all network segments!")
+            st.dataframe(expired_master[["ID", "Name", "Area", "Package", "Expiry", "OLT_PON"]], use_container_width=True, hide_index=True)
+        else:
+            st.success("All network terminal loops running in healthy green zones.")
+            
+        st.write("---")
+        st.subheader("Segment Cluster View")
+        selected_area = st.selectbox("Filter Network Segment Monitoring", st.session_state["areas_list"])
+        df_admin_view = df_subs[df_subs["Area"] == selected_area]
+        
+        for idx, row in df_admin_view.iterrows():
+            with st.container(border=True):
+                st.markdown(f"#### {row['Name']} (`{row['ID']}`) — Profile: {row['Package']}")
+                st.write(f"Grid Node Path: **{row['OLT_PON']}** | Hardware Node Splitter: **{row['Splitter']}** | Expiry: `{row['Expiry']}`")
+                with st.expander("View Lifetime Payment Logs"):
+                    st.dataframe(df_logs[df_logs["ID"] == row["ID"]][["Pay_Date", "For_Month", "Amount", "Collector"]], use_container_width=True, hide_index=True)
+
+    # ADVANCED TAB 2: INVENTORY STOCK MANAGEMENT
+    with tab_inventory:
+        st.subheader("📦 Fiber Hardware Inventory Core Ledger")
+        c_i1, c_i2 = st.columns(2)
+        with c_i1:
+            st.write("Current Stock Reserves:")
+            st.json(st.session_state["inventory_db"])
+        with c_i2:
+            st.write("📥 Restock Material Logistics Form")
+            item_to_stock = st.selectbox("Select Material Asset", list(st.session_state["inventory_db"].keys()))
+            qty_to_add = st.number_input("Log Quantity Pack Received", min_value=1, step=1)
+            if st.button("Commit Materials into Stock"):
+                st.session_state["inventory_db"][item_to_stock] += qty_to_add
+                st.success(f"Material {item_to_stock} stock pools expanded.")
                 st.rerun()
 
-    # Sidebar Logout
-    if st.sidebar.button("🔒 Secure Logout", use_container_width=True):
-        st.session_state["logged_in"] = False; st.rerun()
-        
-    st.sidebar.subheader("⚙️ Customer Control")
-    
-    # Manual Single Entry Form
-    with st.sidebar.expander("📝 Manual Add Customer", expanded=False):
-        with st.form("manual_add_form", clear_on_submit=True):
-            n_name = st.text_input("Customer Name")
-            n_user = st.text_input("Username (Router ID)")
-            n_phone = st.text_input("Phone Number")
-            n_area = st.text_input("Area (e.g. Sanghoi System)")
-            n_bill = st.number_input("Bill Amount (Rs.)", min_value=0, step=100)
-            n_prev = st.number_input("Previous Balance (Rs.)", min_value=0, step=100)
-            
-            if st.form_submit_button("Save Customer", use_container_width=True):
-                if n_name and n_user and n_area and n_bill > 0:
-                    calc_expiry = today_date + timedelta(days=30)
-                    supabase.table("billing_users").insert({
-                        "isp_id": my_isp_id, "name": n_name, "username": n_user, "phone": n_phone,
-                        "area": n_area, "previous_balance": float(n_prev), "current_bill": float(n_bill), 
-                        "status": "Unpaid", "reg_date": str(today_date), "expiry_date": str(calc_expiry)
-                    }).execute()
+    # ADVANCED TAB 3: BUSINESS EXPENSES MANAGEMENT
+    with tab_expenses:
+        st.subheader("💸 Cash Outflow & Network Operational Expenses")
+        with st.form("expense_form", clear_on_submit=True):
+            exp_desc = st.text_input("Expense Particular Description (e.g., Office Rent, Splicing Machine Repair)")
+            exp_amt = st.number_input("Amount Paid Out (PKR)", min_value=0, step=50)
+            if st.form_submit_button("Log Expense Voucher"):
+                if exp_desc and exp_amt > 0:
+                    st.session_state["expense_logs"].append({"Desc": exp_desc, "Amount": exp_amt, "Date": today_str})
+                    st.success("Outflow Voucher Authenticated!")
                     st.rerun()
+        if not df_exp.empty:
+            st.dataframe(df_exp, use_container_width=True, hide_index=True)
 
-    # 📥 EXACT EXCEL AUTOMATIC READER (MATCHED WITH YOUR ORIGINAL SHEET HEADERS)
-    if is_admin:
-        with st.sidebar.expander("📥 Bulk Upload Original Excel / CSV", expanded=True):
-            st.caption("Apni asli Excel ya CSV file upload karein. Headers auto-mapped hain.")
-            uploaded_file = st.file_uploader("Upload File", type=["csv", "xlsx"])
+    # ADVANCED TAB 4: STAFF CREATION WITH GRID COUPLING
+    with tab_staff_mgmt:
+        st.subheader("👥 System User Accounts Deployment")
+        with st.form("create_staff_form", clear_on_submit=True):
+            st_name = st.text_input("Staff Engineer Full Name")
+            st_user = st.text_input("Choose Terminal Username").strip()
+            st_pass = st.text_input("Set Security Password Token").strip()
+            st_area = st.selectbox("Assign Dedicated Sector Node Block", st.session_state["areas_list"])
             
-            if uploaded_file is not None:
-                try:
-                    if uploaded_file.name.endswith('.csv'): 
-                        df_bulk = pd.read_csv(uploaded_file)
-                    else: 
-                        df_bulk = pd.read_excel(uploaded_file)
+            if st.form_submit_button("Deploy User Credentials"):
+                if st_user and st_pass and st_name:
+                    st.session_state["staff_registry"].append({"Username": st_user, "Password": st_pass, "Area": st_area, "Name": st_name})
+                    st.success(f"Staff access node initialized for {st_name} on {st_area}.")
+                    st.rerun()
                     
-                    # Columns check logic according to your exact sheet headers
-                    required_headers = ['Username', 'CustomerName', 'Area', 'BillAmount']
-                    found_headers = [col for col in required_headers if col in df_bulk.columns]
+        st.write("---")
+        st.subheader("Active System Access Registries")
+        st.dataframe(pd.DataFrame(st.session_state["staff_registry"]), use_container_width=True, hide_index=True)
+
+    # ADVANCED TAB 5: PROVISION NEW NODE WITH PORT SEGMENTATION
+    with tab_cust:
+        st.subheader("➕ Provision New Fiber Loop Client Link")
+        with st.form("admin_cust_form", clear_on_submit=True):
+            c_id = st.text_input("Assign Unique Client Node Account ID")
+            c_name = st.text_input("Client Full Name")
+            c_phone = st.text_input("WhatsApp Primary Contact (with country code, e.g. +923001234567)")
+            c_area = st.selectbox("Select Core Routing Area", st.session_state["areas_list"])
+            c_pkg = st.selectbox("Bandwidth Profile", ["10 Mbps", "15 Mbps", "20 Mbps", "30 Mbps"])
+            c_tariff = st.number_input("Setup Monthly Base Rent Tariff (PKR)", min_value=0, step=100)
+            
+            st.markdown("##### 🛠️ Physical Network Port Mapping Configuration")
+            c_olt = st.text_input("OLT Box & PON Port Assignment ID (e.g. OLT-02_PON-4)")
+            c_splitter = st.text_input("Splitter Box Location Reference (e.g. 1:8-Spl_SectorG)")
+            
+            # Auto Hardware Consumption Selection
+            consume_onu = st.checkbox("Automatically deduct 1 ONU asset unit from Inventory Stock", value=True)
+            
+            if st.form_submit_button("Provision and Active Broadband Link"):
+                if c_id and c_name and c_phone:
+                    if consume_onu and st.session_state["inventory_db"]["XPON_ONUs"] > 0:
+                        st.session_state["inventory_db"]["XPON_ONUs"] -= 1
                     
-                    if len(found_headers) < len(required_headers):
-                        st.sidebar.error("⚠️ File Headers main mismatch hai. Ensure columns match original structure.")
-                    else:
-                        if st.button("🚀 Start Precision Upload", use_container_width=True):
-                            success_count = 0
-                            for _, row in df_bulk.iterrows():
-                                try:
-                                    c_user = str(row['Username']).strip()
-                                    c_name = str(row['CustomerName']).strip()
-                                    c_area = str(row['Area']).strip()
-                                    c_bill = float(row['BillAmount']) if pd.notna(row['BillAmount']) else 0.0
-                                    
-                                    # Safe checks for trailing spaces in your original sheet columns
-                                    c_phone = str(row['Phone']).strip() if 'Phone' in row and pd.notna(row['Phone']) else ""
-                                    
-                                    # Reading 'Previous Balance ' with trailing space check from excel
-                                    p_col = [col for col in df_bulk.columns if 'Previous Balance' in col]
-                                    c_prev = float(row[p_col[0]]) if p_col and pd.notna(row[p_col[0]]) else 0.0
-                                    
-                                    # Target automated 30 days lock
-                                    auto_expiry_target = today_date + timedelta(days=30)
-                                    
-                                    # Clear duplicated users prevention
-                                    supabase.table("billing_users").insert({
-                                        "isp_id": my_isp_id, "name": c_name, "username": c_user,
-                                        "phone": c_phone, "area": c_area, "previous_balance": c_prev,
-                                        "current_bill": c_bill, "status": "Unpaid", "reg_date": str(today_date),
-                                        "expiry_date": str(auto_expiry_target)
-                                    }).execute()
-                                    success_count += 1
-                                except Exception:
-                                    continue
-                            st.sidebar.success(f"🎉 Imported {success_count} Records Perfectly!")
-                            st.rerun()
-                except Exception as e:
-                    st.sidebar.error(f"Error Reading File: {str(e)}")
-
-    # FETCH MATHEMATICAL PIPELINES FOR DATA ACCURACY
-    users_resp = supabase.table("billing_users").select("*").eq("isp_id", my_isp_id).order("name").execute()
-    history_resp = supabase.table("billing_history").select("*").eq("isp_id", my_isp_id).execute()
-    df_users = pd.DataFrame(users_resp.data)
-    df_history = pd.DataFrame(history_resp.data)
-
-    # PRECISION MATHEMATICAL LOCKS FOR THE TOP DASHBOARD
-    total_nodes = len(df_users) if not df_users.empty else 0
-    paid_nodes = len(df_users[df_users['status'] == 'Paid']) if not df_users.empty else 0
-    unpaid_nodes = len(df_users[df_users['status'] == 'Unpaid']) if not df_users.empty else 0
-    
-    # 1. Total Collected Lock (Always matches exact sum of payment history logs)
-    total_cash_recovered = float(df_history['amount'].sum()) if not df_history.empty else 0.0
-    
-    # 2. Total Outstanding Lock (Always matches exact current display values of client dictionary)
-    total_cash_remaining = 0.0
-    if not df_users.empty:
-        for idx, r in df_users.iterrows():
-            if r['status'] == 'Unpaid':
-                p_bal = float(r['previous_balance'] if r['previous_balance'] else 0.0)
-                c_bill = float(r['current_bill'] if r['current_bill'] else 0.0)
-                total_cash_remaining += (p_bal + c_bill)
-
-    # Dynamic Metric Bar Implementation
-    st.markdown(f"""
-    <div class="screenshot-metrics">
-        <div class="metric-item"><div class="metric-num">{total_nodes}</div><div style="font-size:12px; color:#64748b;">Total Clients</div></div>
-        <div class="metric-item"><div class="metric-num">{paid_nodes}</div><div class="metric-sub-green">↑ {paid_nodes} Recovered</div></div>
-        <div class="metric-item"><div class="metric-num">{unpaid_nodes}</div><div class="metric-sub-red">↓ -{unpaid_nodes} Remaining</div></div>
-        <div class="metric-item"><div class="metric-num">Rs. {total_cash_recovered:,.0f}</div><div style="font-size:12px; color:#64748b;">Total Collected</div></div>
-        <div class="metric-item"><div class="metric-num">Rs. {total_cash_remaining:,.0f}</div><div style="font-size:12px; color:#64748b;">Total Outstanding</div></div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # --- AREA SELECTION PANEL ---
-    st.markdown('<div class="screenshot-section-title">📍 Area Wise Filter System</div>', unsafe_allow_html=True)
-    areas_list = ["All Areas"]
-    if not df_users.empty:
-        areas_list = ["All Areas"] + list(df_users['area'].unique())
-    sel_area = st.selectbox("Select Filter Sector:", areas_list, label_visibility="collapsed")
-    filtered_users = df_users if sel_area == "All Areas" else df_users[df_users['area'] == sel_area]
-
-    # --- CLIENT DIRECTORY PANEL ---
-    st.markdown('<div class="screenshot-section-title">📋 Client Directory & Cash Collection</div>', unsafe_allow_html=True)
-    
-    if filtered_users.empty:
-        st.info("No data available for display.")
-    else:
-        for idx, row in filtered_users.iterrows():
-            p_val = float(row['previous_balance'] if row['previous_balance'] else 0.0)
-            c_val = float(row['current_bill'] if row['current_bill'] else 0.0)
-            
-            # Mathematical Sync: Net due matches exactly what's added to metrics
-            net_payable = (p_val + c_val) if row['status'] == 'Unpaid' else 0.0
-            
-            status_badge = '<span style="color:#16a34a; font-weight:bold;">🟢 Paid</span>' if row['status'] == 'Paid' else '<span style="color:#dc2626; font-weight:bold;">🔴 Unpaid</span>'
-                
-            cc1, cc2 = st.columns([5, 1.2])
-            with cc1:
-                st.markdown(f"""
-                <div style="font-family:'Arial',sans-serif; font-size:15px; color:#334155; padding: 5px 0px;">
-                    <b style="color:#0f172a; font-size:16px;">{row['name']}</b> ({row['username']}) &nbsp;|&nbsp; 
-                    📍 {row['area']} &nbsp;|&nbsp; 📞 {row['phone'] if row['phone'] else 'N/A'} &nbsp;|&nbsp; 
-                    💵 Net Due: <b>Rs. {net_payable:,.0f}</b> (Prev: {p_val:,.0f} | Current: {c_val:,.0f}) &nbsp;|&nbsp; Status: {status_badge}
-                </div>
-                """, unsafe_allow_html=True)
-                
-            with cc2:
-                if row['status'] == 'Unpaid':
-                    if st.button("Receive Cash 💵", key=f"rec_card_{row['id']}", use_container_width=True):
-                        curr_exp = datetime.strptime(row['expiry_date'], "%Y-%m-%d").date()
-                        extended_exp = curr_exp + timedelta(days=30) if curr_exp >= today_date else today_date + timedelta(days=30)
-                        
-                        # Database updates
-                        supabase.table("billing_users").update({
-                            "status": "Paid", 
-                            "previous_balance": 0.0,
-                            "last_paid_date": today_str, 
-                            "collected_by": current_operator, 
-                            "expiry_date": str(extended_exp)
-                        }).eq("id", row['id']).execute()
-                        
-                        # Add strict historical record that updates Total Collected metric instantly
-                        supabase.table("billing_history").insert({
-                            "isp_id": my_isp_id, "user_id": int(row['id']), "name": row['name'], "area": row['area'],
-                            "amount": net_payable, "pay_date": today_str, "pay_month": current_month, "pay_year": current_year, "collected_by": current_operator
-                        }).execute()
-                        st.rerun()
-                else:
-                    st.markdown(f"<p style='color:green; text-align:center; font-size:13px; margin-top:8px;'>Collected by {row.get('collected_by','Admin')}</p>", unsafe_allow_html=True)
-            st.markdown("<hr style='margin:0px 0px 10px 0px; opacity:0.15;'>", unsafe_allow_html=True)
-
-    # --- BUSINESS ANNUAL LEDGER LOGS ---
-    st.markdown('<div class="screenshot-section-title">📚 Business Annual Ledger Logs</div>', unsafe_allow_html=True)
-    if not df_history.empty:
-        st.dataframe(df_history[['name', 'area', 'amount', 'pay_date', 'collected_by', 'pay_month']], use_container_width=True)
-    else:
-        st.caption("History log khali hai. Jab aap collection karenge, records yahan save honge.")
+                    st.session_state["customers_master"].append({
+                        "ID": c_id, "Name": c_name, "Phone": c_phone, "Area": c_area,
+                        "Package": c_pkg, "Tariff": c_tariff,
+                        "Created_At": today_str,
+                        "Expiry": (datetime.now().date() + timedelta(days=30)).strftime("%Y-%m-%d"),
+                        "OLT_PON": c_olt if c_olt else "Not_Mapped",
+                        "Splitter": c_splitter if c_splitter else "Not_Mapped"
+                    })
+                    st.success(f"Subscriber node loop built and deployed under {c_area} matrix configuration!")
+                    st.rerun()
