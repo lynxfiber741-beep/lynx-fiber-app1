@@ -224,3 +224,156 @@ st.sidebar.write("---")
 if st.sidebar.button("🔒 Secure Log Out", use_container_width=True):
     st.session_state["auth_session"] = {"is_logged_in": False, "role": None, "company_id": None, "company_name": None, "staff_id": None, "allocated_area": None}
     st.rerun()
+    # ====================================================================
+# STEP 3: CORE DASHBOARD & SUBSCRIBER REGISTRATION VIEW
+# ====================================================================
+
+# User session state data nikalen
+user_data = st.session_state["auth_session"]
+current_company = user_data["company_id"]
+
+# --- DYNAMIC DATABASE CONTROLLERS FOR INTERFACE ---
+def fetch_company_areas(comp_id):
+    conn = get_db_connection()
+    df = pd.read_sql_query("SELECT * FROM network_areas WHERE company_id=?", conn, params=(comp_id,))
+    conn.close()
+    return df
+
+def register_new_subscriber(cust_id, name, cell, cnic, address, conn_type, pkg_net, amt_net, pkg_cable, amt_cable, area_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            INSERT INTO subscribers (
+                company_id, custom_cust_id, name, cell_no, cnic, address, 
+                connection_type, package_internet, internet_amount, 
+                package_cable, cable_amount, area_id, status, date_created
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active', ?)
+        """, (current_company, cust_id, name, cell, cnic, address, conn_type, pkg_net, amt_net, pkg_cable, amt_cable, area_id, datetime.now().date()))
+        conn.commit()
+        success = True
+    except Exception as e:
+        st.error(f"Database Write Error: {e}")
+        success = False
+    finally:
+        conn.close()
+    return success
+
+# --- ROUTING CONTROL BASED ON USER ROLE ---
+if user_data["role"] == "isp_owner":
+    st.title(f"📊 Centralized Enterprise Operations — {user_data['company_name']}")
+    
+    # Navigation tabs inside the ISP dashboard
+    menu_tabs = st.tabs([
+        "👤 Provision New Subscriber", 
+        "📍 Manage Network Areas", 
+        "📋 Live Subscriber Directory"
+    ])
+    
+    # ----------------------------------------------------------------
+    # TAB 1: CUSTOMER PROFILE REGISTRATION VIEW
+    # ----------------------------------------------------------------
+    with menu_tabs[0]:
+        st.markdown("<h3 style='color: #00f0ff;'>📝 Subscriber Entry Protocol</h3>", unsafe_allow_html=True)
+        
+        # Pull area allocations live from data store
+        areas_df = fetch_company_areas(current_company)
+        
+        if areas_df.empty:
+            st.warning("⚠️ Koi Network Area nahi mila! Pehle 'Manage Network Areas' tab mein ja kar Sanghoi ya Saeela System create karein.")
+        else:
+            # Dropdown dict mapping mapping
+            area_mapping = dict(zip(areas_df["area_name"], areas_df["area_id"]))
+            
+            with st.form("subscriber_registration_form", clear_on_submit=True):
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    cust_id = st.text_input("Internet User ID / Custom Account ID (Unique)", placeholder="e.g., LNX-9982").strip()
+                    cust_name = st.text_input("Subscriber Full Name").strip()
+                    cell_no = st.text_input("Cell Phone Number").strip()
+                    cnic_no = st.text_input("CNIC Number (Optional)").strip()
+                
+                with col2:
+                    selected_area_name = st.selectbox("Sublocality / Operational System Network", options=list(area_mapping.keys()))
+                    conn_type = st.selectbox("Connection Service Type", options=["Internet", "Cable", "Both"])
+                    address = st.text_area("Installation Physical Address").strip()
+                
+                st.write("---")
+                st.markdown("#### 💰 Tariff Rates & Package Architecture Setup")
+                
+                p_col1, p_col2 = st.columns(2)
+                with p_col1:
+                    pkg_internet = st.text_input("Internet Package Profile Name", placeholder="e.g., 20 Mbps Premium")
+                    internet_amount = st.number_input("Monthly Internet Base Rate (PKR)", min_value=0.0, step=50.0)
+                
+                with p_col2:
+                    pkg_cable = st.text_input("Cable TV Package Profile Name", placeholder="e.g., Digital HD Max")
+                    cable_amount = st.number_input("Monthly Cable Base Rate (PKR)", min_value=0.0, step=50.0)
+                
+                submit_subscriber = st.form_submit_button("⚡ Finalize & Write Subscriber Node")
+                
+                if submit_subscriber:
+                    if not cust_id or not cust_name:
+                        st.error("❌ Form Submission Rejected! 'User ID' aur 'Name' fields lazmi hain.")
+                    else:
+                        chosen_area_id = area_mapping[selected_area_name]
+                        if register_new_subscriber(cust_id, cust_name, cell_no, cnic_no, address, conn_type, pkg_internet, internet_amount, pkg_cable, cable_amount, chosen_area_id):
+                            st.success(f"🎉 Core Node Registered! Subscriber '{cust_name}' data securely deployed on DB.")
+                            st.rerun()
+
+    # ----------------------------------------------------------------
+    # TAB 2: REGIONAL NETWORK SYSTEMS MANAGEMENT (Sanghoi, Saeela etc.)
+    # ----------------------------------------------------------------
+    with menu_tabs[1]:
+        st.markdown("<h3 style='color: #00f0ff;'>📍 Regional Network Node Architecture</h3>", unsafe_allow_html=True)
+        
+        col_input, col_view = st.columns([1, 1.5])
+        
+        with col_input:
+            st.markdown("##### Add New Distribution Sector")
+            with st.form("add_area_form", clear_on_submit=True):
+                new_area_name = st.text_input("Area / System Name", placeholder="e.g., Sanghoi System").strip()
+                add_area_btn = st.form_submit_button("Deploy Sector")
+                
+                if add_area_btn and new_area_name:
+                    conn = get_db_connection()
+                    cursor = conn.cursor()
+                    cursor.execute("INSERT INTO network_areas (company_id, area_name) VALUES (?, ?)", (current_company, new_area_name))
+                    conn.commit()
+                    conn.close()
+                    st.success(f"Sector '{new_area_name}' deployed successfully!")
+                    st.rerun()
+        
+        with col_view:
+            st.markdown("##### Configured Distribution Sectors")
+            fresh_areas = fetch_company_areas(current_company)
+            if not fresh_areas.empty:
+                st.dataframe(fresh_areas[["area_id", "area_name"]], use_container_width=True, hide_index=True)
+            else:
+                st.info("Filhal koi area register nahi hai.")
+
+    # ----------------------------------------------------------------
+    # TAB 3: LIVE SUBSCRIBER DIRECTORY ENGINE
+    # ----------------------------------------------------------------
+    with menu_tabs[2]:
+        st.markdown("<h3 style='color: #00f0ff;'>📋 Live Subscriber Grid Array</h3>", unsafe_allow_html=True)
+        conn = get_db_connection()
+        subs_df = pd.read_sql_query("""
+            SELECT s.custom_cust_id as [User ID], s.name as [Name], s.cell_no as [Phone], 
+                   a.area_name as [Network System], s.connection_type as [Type], 
+                   (s.internet_amount + s.cable_amount) as [Total Tariff Rate], s.status as [Status]
+            FROM subscribers s
+            LEFT JOIN network_areas a ON s.area_id = a.area_id
+            WHERE s.company_id = ?
+        """, conn, params=(current_company,))
+        conn.close()
+        
+        if not subs_df.empty:
+            st.dataframe(subs_df, use_container_width=True, hide_index=True)
+        else:
+            st.info("No active subscribers provisioned in the current node directory.")
+
+elif user_data["role"] == "super_admin":
+    st.title("🌐 SaaS Platforms Global Control Tower Console")
+    st.write("Welcome, Master Controller. All systems functional.")
