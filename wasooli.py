@@ -3,33 +3,50 @@ import pandas as pd
 from datetime import datetime
 from supabase import create_client, Client
 
-# --- DITTO WASOOLI PK THEME ENGINE (CSS INJECTION) ---
+# --- DITTO WASOOLI PK THEME ENGINE WITH COLLAPSIBLE SIDEBAR FIX ---
 st.set_page_config(page_title="LYNX Fiber - Advanced ISP Portal", layout="wide", page_icon="⚡")
 
+# Top Head Recording Dynamic responsive CSS injection
 st.markdown("""
 <style>
-    .block-container { padding-top: 0px; padding-bottom: 0px; max-width: 100% !important; background-color: #f8fafc; }
+    /* Full layout auto-resizing grid adjustment */
+    .block-container { 
+        padding-top: 0px !important; 
+        padding-bottom: 0px !important; 
+        max-width: 100% !important; 
+        background-color: #f8fafc; 
+    }
     [data-testid="stHeader"] { display: none; }
     
-    /* Wasooli PK Exact Top Blue Ribbon Header Bar */
+    /* Responsive Header Ribbon Engine fixing stuck navigation */
     .wasooli-header {
-        background-color: #0284c7 !important; color: white !important; padding: 15px 40px;
-        display: flex; justify-content: space-between; align-items: center;
-        width: 100vw; position: relative; left: 50%; right: 50%; margin-left: -50vw; margin-right: -50vw;
-        font-family: 'Arial', sans-serif; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border-bottom: 3px solid #0369a1;
+        background-color: #0284c7 !important; 
+        color: white !important; 
+        padding: 15px 30px;
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center;
+        width: 100%;
+        font-family: 'Arial', sans-serif; 
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
+        border-bottom: 3px solid #0369a1;
+        margin-bottom: 20px;
+        border-radius: 4px;
     }
-    .wasooli-brand { font-size: 24px; font-weight: bold; letter-spacing: 0.5px; }
+    .wasooli-brand { font-size: 22px; font-weight: bold; letter-spacing: 0.5px; }
     .wasooli-role-badge { background-color: white; color: #0284c7; padding: 6px 16px; border-radius: 4px; font-weight: bold; font-size: 13px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.2); }
     
-    .action-row { display: flex; gap: 12px; margin-top: 20px; margin-bottom: 25px; flex-wrap: wrap; }
+    /* Top Action Matrix Layout Buttons */
+    .action-row { display: flex; gap: 12px; margin-top: 10px; margin-bottom: 25px; flex-wrap: wrap; }
     .action-card-btn {
         background: linear-gradient(135deg, #0284c7, #0369a1); color: white; border: none;
         padding: 12px 24px; border-radius: 4px; font-size: 14px; font-weight: bold;
         text-align: center; cursor: pointer; flex: 1; min-width: 180px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     
-    .metric-box-container { display: flex; gap: 20px; margin-bottom: 25px; }
-    .metric-box { background: white; padding: 15px 25px; border-radius: 6px; border: 1px solid #e2e8f0; border-top: 4px solid #0284c7; flex: 1; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+    /* Metric Boxes Structure */
+    .metric-box-container { display: flex; gap: 20px; margin-bottom: 25px; flex-wrap: wrap; }
+    .metric-box { background: white; padding: 15px 25px; border-radius: 6px; border: 1px solid #e2e8f0; border-top: 4px solid #0284c7; flex: 1; min-width: 220px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
     .metric-box-title { color: #64748b; font-size: 13px; font-weight: bold; text-transform: uppercase; }
     .metric-box-value { color: #0f172a; font-size: 28px; font-weight: bold; margin-top: 5px; }
     
@@ -47,21 +64,21 @@ def init_supabase():
 
 supabase: Client = init_supabase()
 
-# Timing Core Variables
+# Live System Core Clock variables
 current_month = datetime.now().strftime("%B")
 current_year = datetime.now().strftime("%Y")
 today_date = datetime.now().strftime("%Y-%m-%d")
 MASTER_APPROVAL_CODE = "LYNX-SECURE-2026"
 
-# Multi-Role Session Management
+# Stateful Multi-Role Architecture
 if "logged_in" not in st.session_state: st.session_state["logged_in"] = False
-if "user_role" not in st.session_state: st.session_state["user_role"] = None  # 'Admin' ya 'Staff'
+if "user_role" not in st.session_state: st.session_state["user_role"] = None  
 if "isp_id" not in st.session_state: st.session_state["isp_id"] = None
 if "isp_name" not in st.session_state: st.session_state["isp_name"] = ""
 if "operator_name" not in st.session_state: st.session_state["operator_name"] = ""
 if "branding_mode" not in st.session_state: st.session_state["branding_mode"] = "Lynx Branding"
 
-# --- TOP PRO HEADER CONTROLLER ---
+# --- TOP RESPONSIVE HEADER RENDERER ---
 if st.session_state["logged_in"]:
     display_title = st.session_state["isp_name"].upper() if st.session_state["branding_mode"] == "Own Branding" else "LYNX FIBER INTERNET"
     role_text = f"👤 {st.session_state['operator_name'].upper()} ({st.session_state['user_role'].upper()})"
@@ -69,16 +86,16 @@ if st.session_state["logged_in"]:
 else:
     st.markdown('<div class="wasooli-header"><div class="wasooli-brand">⚡ LYNX FIBER ADVANCED SYSTEM</div><div class="wasooli-role-badge">🔒 ACCESS SECURED</div></div>', unsafe_allow_html=True)
 
-# --- AUTHENTICATION GATEWAY ---
+# --- PORTAL ROUTING GATEWAYS ---
 if not st.session_state["logged_in"]:
     _, col_center, _ = st.columns([1, 1.8, 1])
     with col_center:
-        st.markdown("<br><br>", unsafe_allow_html=True)
+        st.markdown("<br>", unsafe_allow_html=True)
         tab_staff, tab_admin, tab_register = st.tabs(["📲 Field Staff Login", "🔒 Owner/Admin Gate", "📝 Corporate Signup"])
         
         with tab_staff:
             with st.form("staff_login_form"):
-                st.caption("Field boys billing aur recovery receive karne ke liye login karein:")
+                st.caption("Field boys billing aur recovery receive karne ke liye login/access karein:")
                 s_user = st.text_input("Staff Username ID")
                 s_pass = st.text_input("Staff Password", type="password")
                 if st.form_submit_button("Enter Field Dashboard", use_container_width=True):
@@ -96,7 +113,7 @@ if not st.session_state["logged_in"]:
 
         with tab_admin:
             with st.form("admin_login_form"):
-                st.caption("Main ISP Owner login gateway:")
+                st.caption("Main ISP Owner (Master Dashboard) login access gateway:")
                 a_user = st.text_input("Master Username")
                 a_pass = st.text_input("Master Password", type="password")
                 if st.form_submit_button("Authenticate Master Engine", use_container_width=True):
@@ -113,7 +130,7 @@ if not st.session_state["logged_in"]:
                         st.error("❌ Owner credentials incorrect!")
 
         with tab_register:
-            st.info("📢 Helplines for Master Keys: 0331-5336673 | 0321-5943786")
+            st.info("📢 Corporate Network Generation Portal Security Activated.")
             with st.form("signup_master_form"):
                 r_company = st.text_input("Company Corporate Name")
                 r_user = st.text_input("Desired Admin Username")
@@ -130,13 +147,13 @@ if not st.session_state["logged_in"]:
                         }).execute()
                         st.success("🎉 Registry Complete! Log in via Admin Gate.")
 
-# --- LIVE ENVIRONMENT ---
+# --- LIVE INTERFACE (ROLES SECURED LAYOUT) ---
 else:
     my_isp_id = st.session_state["isp_id"]
     is_admin = (st.session_state["user_role"] == "Admin")
     current_operator = st.session_state["operator_name"]
     
-    # Action Matrix Row Design
+    # 1. Standard Top Premium Ribbon Links 
     st.markdown("""
     <div class="action-row">
         <div class="action-card-btn">User/Dealer Application</div>
@@ -147,13 +164,12 @@ else:
     </div>
     """, unsafe_allow_html=True)
     
-    # Sidebar Access Control
-    st.sidebar.markdown(f"### Mode: `{st.session_state['user_role']}` Panel")
-    if st.sidebar.button("🔒 Secure Logout", use_container_width=True):
+    # --- RESPONSIVE SIDEBAR SUBSYSTEM ---
+    st.sidebar.markdown(f"### Management: `{st.session_state['user_role']}`")
+    if st.sidebar.button("🔒 Secure Logout Control", use_container_width=True):
         st.session_state["logged_in"] = False
         st.rerun()
         
-    # Both Staff & Admin can register entries
     with st.sidebar.expander("➕ Register New Customer Node", expanded=True):
         with st.form("add_user_form", clear_on_submit=True):
             n_name = st.text_input("Customer Full Name")
@@ -170,7 +186,6 @@ else:
                     }).execute()
                     st.rerun()
 
-    # Admin Only Tools
     if is_admin:
         with st.sidebar.expander("👥 Create Staff/Boy Accounts", expanded=False):
             with st.form("create_staff_form", clear_on_submit=True):
@@ -196,13 +211,12 @@ else:
             st.sidebar.success("New Billing cycle advanced!")
             st.rerun()
 
-    # Data Pipeline Execution
+    # Database Live Fetch Operations
     users_resp = supabase.table("billing_users").select("*").eq("isp_id", my_isp_id).order("name").execute()
     history_resp = supabase.table("billing_history").select("*").eq("isp_id", my_isp_id).execute()
     df_users = pd.DataFrame(users_resp.data)
     df_history = pd.DataFrame(history_resp.data)
 
-    # Secure Tabs Isolation
     if is_admin:
         tab_summary, tab_areas, tab_history = st.tabs(["📊 Main Billing Directory", "📍 Area Grid Analytics", "📚 Annual Financial Ledgers"])
     else:
@@ -226,7 +240,7 @@ else:
             
             st.markdown('<div class="table-section-heading">📋 CUSTOMER BILLING MATRIX (DITTO SPREADSHEET)</div>', unsafe_allow_html=True)
             
-            # Grid Layout matching Mockup
+            # Spreadsheet Columns Row
             ch1, ch2, ch3, ch4, ch5, ch6, ch7, ch8, ch9 = st.columns([0.6, 1.2, 1.5, 1.1, 1.1, 0.9, 0.9, 0.9, 1.5])
             ch1.markdown("**CustID**")
             ch2.markdown("**Internet ID**")
@@ -257,7 +271,6 @@ else:
                 
                 if row['status'] == 'Unpaid':
                     if r9.button("Receive Bill 💵", key=f"rec_{row['id']}", use_container_width=True):
-                        # Executing collection process pipeline with operator logging
                         supabase.table("billing_users").update({"status": "Paid", "last_paid_date": today_date, "collected_by": current_operator}).eq("id", row['id']).execute()
                         supabase.table("billing_history").insert({
                             "isp_id": my_isp_id, "user_id": int(row['id']), "name": row['name'], "area": row['area'],
@@ -275,14 +288,14 @@ else:
         st.markdown('<div class="table-section-heading">📍 AREA WISE SECTOR FILTERS</div>', unsafe_allow_html=True)
         if not df_users.empty:
             areas = ["All Nodes"] + list(df_users['area'].unique())
-            sel_area = st.selectbox("Isolate operational view by area zone:", areas)
+            sel_area = st.selectbox("Isolate view by area zone:", areas)
             filtered = df_users if sel_area == "All Nodes" else df_users[df_users['area'] == sel_area]
             st.dataframe(filtered[['id', 'username', 'name', 'phone', 'area', 'status', 'collected_by']], use_container_width=True)
 
     if is_admin:
         with tab_history:
-            st.markdown('<div class="table-section-heading">📚 TRANSACTION AUDIT REGISTER (STAFF TRACKING ENABLED)</div>', unsafe_allow_html=True)
+            st.markdown('<div class="table-section-heading">📚 REGIONAL TRANSACTION LEDGER</div>', unsafe_allow_html=True)
             if not df_history.empty:
                 st.dataframe(df_history[['name', 'area', 'amount', 'pay_date', 'collected_by', 'pay_month', 'pay_year']].sort_index(ascending=False), use_container_width=True)
             else:
-                st.info("No commercial transactions logged yet.")
+                st.info("No logs registered during this operational cycle.")
