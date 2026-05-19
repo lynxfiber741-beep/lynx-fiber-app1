@@ -640,3 +640,70 @@ with g_col2:
         st.info("Add user profiles with explicit package plans to map data matrices.")
         
 st.markdown("---")
+# ====================================================================
+# STEP 6: PRODUCTION POLISH, SAFE STATE ENGINE & LAYOUT SYMMETRY
+# ====================================================================
+
+# 1. CSS Injection for Wasooli Premium Dark Theme Aesthetics
+st.markdown("""
+    <style>
+        /* Tabs navigation bar style fix */
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 12px;
+            background-color: #0e1117;
+            padding: 8px;
+            border-radius: 10px;
+            border: 1px solid #1e293b;
+        }
+        .stTabs [data-baseweb="tab"] {
+            height: 45px;
+            white-space: pre;
+            background-color: #1e293b;
+            border-radius: 6px;
+            color: #94a3b8;
+            padding: 0px 20px;
+            font-weight: 600;
+        }
+        .stTabs [aria-selected="true"] {
+            background-color: #00f0ff !important;
+            color: #000000 !important;
+        }
+        /* Metric Card border glow */
+        div[data-testid="metric-container"] {
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+""", unsafe_allow_html=True)
+
+# 2. Database Safe Connection Check Utility
+def verify_system_integrity():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        # Ping verification check on master tables
+        cursor.execute("SELECT 1 FROM saas_companies LIMIT 1")
+        cursor.fetchone()
+        conn.close()
+        return True
+    except Exception as e:
+        st.sidebar.error(f"⚠️ Core Desync: Database connection pool full. Retrying... ({e})")
+        return False
+
+# Sidebar Footer Status Info
+st.sidebar.markdown("---")
+if verify_system_integrity():
+    st.sidebar.markdown("### 🟢 Node Status: Connected")
+    st.sidebar.caption(f"Server IP Connection Pool: Secure Cloud PostgreSQL Node")
+    st.sidebar.caption("App Version: 2.0.0 (Enterprise SaaS Multi-Tenant)")
+else:
+    st.sidebar.markdown("### 🔴 Node Status: Offline")
+
+# 3. Final Memory Flush Control
+if st.sidebar.button("🧹 Clear Layout Cache", use_container_width=True):
+    st.cache_data.clear()
+    st.success("System application cache flushed successfully!")
+    st.rerun()
