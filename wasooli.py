@@ -2,213 +2,274 @@ import streamlit as st
 import pandas as pd
 import sqlite3
 from datetime import datetime, timedelta
-import calendar
 
-# --- PREMIUM ENTERPRISE ARCHITECTURE ---
-st.set_page_config(page_title="Lynx Fiber Pvt Ltd - Executive BSS Suite", layout="wide")
+# --- MULTI-TENANT ENTERPRISE CLOUD CONFIGURATION ---
+st.set_page_config(page_title="Wasoolee SaaS - Telecom Billing Engine", layout="wide")
 
+# Premium Neon Cyber Dark Theme For Global SaaS Sales
 st.markdown("""
     <style>
-    .stApp { background-color: #0b0f19; color: #f1f5f9; }
-    div[data-testid="stMetricValue"] { color: #38bdf8 !important; font-family: monospace; font-size: 2.2rem; }
-    .ledger-debit { color: #f87171; font-weight: bold; }
-    .ledger-credit { color: #4ade80; font-weight: bold; }
-    .invoice-box {
-        background: #131c2e; border-left: 5px solid #38bdf8;
-        padding: 15px; border-radius: 8px; margin-bottom: 12px;
+    .stApp { background-color: #060913; color: #f1f5f9; }
+    div[data-testid="stMetricValue"] { color: #00f0ff !important; font-family: monospace; font-size: 2.3rem; }
+    .isp-card {
+        background: linear-gradient(135deg, #111827 0%, #0f172a 100%);
+        border: 1px solid #1f2937; padding: 20px; border-radius: 12px; margin-bottom: 15px;
     }
+    .badge-paid { background-color: rgba(16, 185, 129, 0.15); color: #10b981; padding: 4px 12px; border-radius: 20px; font-weight: bold; border: 1px solid #10b981; }
+    .badge-unpaid { background-color: rgba(239, 68, 68, 0.15); color: #ef4444; padding: 4px 12px; border-radius: 20px; font-weight: bold; border: 1px solid #ef4444; }
     </style>
 """, unsafe_allow_html=True)
 
-DB_FILE = "lynx_telecom_corporate.db"
+DB_FILE = "wasoolee_saas_core.db"
 
 def get_db():
     conn = sqlite3.connect(DB_FILE)
     conn.row_factory = sqlite3.Row
     return conn
 
-def init_corporate_db():
+def init_saas_database():
     conn = get_db()
     cursor = conn.cursor()
     
-    # 1. Core Corporate Clients (With Balance Ledger Tracker)
+    # 1. Tenants Table (Duniya bhar ke ISPs jo aapko kiraya denge)
     cursor.execute('''
-        CREATE TABLE IF NOT EXISTS corporate_clients (
-            id TEXT PRIMARY KEY, name TEXT, phone TEXT, area TEXT, package TEXT, 
-            tariff INTEGER, account_balance INTEGER DEFAULT 0, status TEXT DEFAULT 'Active'
+        CREATE TABLE IF NOT EXISTS tenants (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            isp_name TEXT UNIQUE,
+            owner_name TEXT,
+            contact_phone TEXT,
+            license_expiry TEXT,
+            account_status TEXT DEFAULT 'Active'
         )
     ''')
     
-    # 2. Immutable General Ledger Invoices (Debit/Credit System)
+    # 2. Multi-Tenant Subscribers Master (Bound by isp_id)
     cursor.execute('''
-        CREATE TABLE IF NOT EXISTS invoices (
-            invoice_num TEXT PRIMARY KEY, client_id TEXT, date_generated TEXT, 
-            due_date TEXT, amount_due INTEGER, amount_paid INTEGER DEFAULT 0, 
-            status TEXT, type TEXT
+        CREATE TABLE IF NOT EXISTS global_subscribers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            isp_id INTEGER,
+            customer_id TEXT,
+            name TEXT,
+            phone TEXT,
+            area TEXT,
+            package TEXT,
+            tariff INTEGER,
+            next_due_date TEXT,
+            FOREIGN KEY(isp_id) REFERENCES tenants(id)
         )
     ''')
     
-    # Seed Core Setup
-    cursor.execute("SELECT COUNT(*) FROM corporate_clients")
+    # 3. Global Financial General Ledger (Double Entry Token)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS dynamic_ledger (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            isp_id INTEGER,
+            customer_id TEXT,
+            date_posted TEXT,
+            amount_processed INTEGER,
+            billing_month TEXT,
+            status TEXT DEFAULT 'Unpaid'
+        )
+    ''')
+    
+    # Seed Initial Platforms for Testing Commercial Model
+    cursor.execute("SELECT COUNT(*) FROM tenants")
     if cursor.fetchone()[0] == 0:
-        cursor.execute("INSERT INTO corporate_clients VALUES ('LX-701', 'Zahid Mehmood', '+923001234567', 'Sanghoi', '10 Mbps', 1500, 0, 'Active')")
-        cursor.execute("INSERT INTO corporate_clients VALUES ('LX-702', 'Raja Naeem', '+923129876543', 'Saeela', '20 Mbps', 2500, -500, 'Suspended')")
+        cursor.execute("INSERT INTO tenants (isp_name, owner_name, contact_phone, license_expiry, account_status) VALUES ('Lynx Fiber Pvt Ltd', 'Umer Wazir', '+923315336673', '2027-12-31', 'Active')")
+        cursor.execute("INSERT INTO tenants (isp_name, owner_name, contact_phone, license_expiry, account_status) VALUES ('Alpha Net Telecom', 'Raja Khan', '+923215943786', '2026-06-01', 'Active')")
         
-        cursor.execute("INSERT INTO invoices VALUES ('INV-2026-001', 'LX-701', '2026-05-01', '2026-05-10', 1500, 1500, 'Paid', 'Monthly Bill')")
-        cursor.execute("INSERT INTO invoices VALUES ('INV-2026-002', 'LX-702', '2026-05-01', '2026-05-10', 2500, 2000, 'Unpaid', 'Monthly Bill')")
-    
+        # Seed Lynx Fiber Customers (isp_id = 1)
+        cursor.execute("INSERT INTO global_subscribers (isp_id, customer_id, name, phone, area, package, tariff, next_due_date) VALUES (1, 'LX-901', 'Zahid Mehmood', '+923001234567', 'Sanghoi', '10 Mbps', 1500, '2026-06-01')")
+        cursor.execute("INSERT INTO dynamic_ledger (isp_id, customer_id, date_posted, amount_processed, billing_month, status) VALUES (1, 'LX-901', '2026-05-01', 1500, 'May 2026', 'Unpaid')")
+        
     conn.commit()
     conn.close()
 
-init_corporate_db()
+init_saas_database()
 
-# --- SECURITY PIN TOKEN GATEWAY ---
-if "auth_token" not in st.session_state:
-    st.session_state["auth_token"] = {"status": False, "user": None}
+# ==================== SAAS MULTI-PORTAL ACCESS SECURITY ====================
+if "saas_token" not in st.session_state:
+    st.session_state["saas_token"] = {"logged_in": False, "role": None, "tenant_id": None, "tenant_name": None}
 
-if not st.session_state["auth_token"]["status"]:
-    st.markdown("<br><br><h2 style='text-align:center; color:#38bdf8;'>LYNX FIBER ENTERPRISE GATEWAY</h2>", unsafe_allow_html=True)
-    c1, c2, c3 = st.columns([1,2,1])
+if not st.session_state["saas_token"]["logged_in"]:
+    st.markdown("<br><br><h1 style='text-align:center; color:#00f0ff; letter-spacing:2px;'>⚡ WASOOLEE CLOUD SOFTWARE ENGINE</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align:center; color:#8b949e;'>Global Multi-Tenant ISP Provisioning & Subscription Suite</p>", unsafe_allow_html=True)
+    
+    c1, c2, c3 = st.columns([1, 1.8, 1])
     with c2:
-        with st.form("auth_form"):
-            u = st.text_input("Username")
-            p = st.text_input("Password", type="password")
-            if st.form_submit_button("Unlock Matrix Server"):
-                if u == "admin" and p == "admin786":
-                    st.session_state["auth_token"] = {"status": True, "user": "Executive Admin"}
+        with st.form("saas_login"):
+            login_identity = st.text_input("ISP Tenant Username / Admin ID").strip()
+            login_pin = st.text_input("System Security PIN", type="password").strip()
+            if st.form_submit_button("Launch Command Core"):
+                if login_identity == "superadmin" and login_pin == "wasooli786":
+                    st.session_state["saas_token"] = {"logged_in": True, "role": "Super_Admin", "tenant_id": 0, "tenant_name": "SaaS Platform Owner"}
                     st.rerun()
                 else:
-                    st.error("Invalid Cryptographic Signature Token.")
+                    conn = get_db()
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT * FROM tenants WHERE isp_name=? AND account_status='Active'", (login_identity,))
+                    tenant_match = cursor.fetchone()
+                    conn.close()
+                    
+                    if tenant_match and login_pin == "1234": # Standard trial pin for all ISPs
+                        st.session_state["saas_token"] = {
+                            "logged_in": True, "role": "ISP_Tenant", "tenant_id": tenant_match["id"], "tenant_name": tenant_match["isp_name"]
+                        }
+                        st.rerun()
+                    else:
+                        st.error("Access Refused: Secure Token Verification Failed or Account Blocked by SaaS Owner.")
     st.stop()
 
-# --- MASTER CONTROLS ---
-st.title("⚡ Lynx Fiber Pvt Ltd - Telecom BSS Executive Engine")
-st.write(f"System Operator Session: `{st.session_state['auth_token']['user']}`")
-st.write("---")
+# Shared Global State variables
+today_iso = datetime.now().strftime("%Y-%m-%d")
 
-# Global Financial Calculations
-conn = get_db()
-cursor = conn.cursor()
-cursor.execute("SELECT SUM(amount_paid) FROM invoices")
-gross_rev = cursor.fetchone()[0] or 0
-cursor.execute("SELECT COUNT(*) FROM corporate_clients WHERE status='Suspended'")
-total_suspended = cursor.fetchone()[0] or 0
+# Sidebar SaaS Operations
+st.sidebar.markdown("<h2 style='color:#00f0ff;'>🌐 WASOOLEE PANEL</h2>", unsafe_allow_html=True)
+st.sidebar.write(f"Session Matrix: **{st.session_state['saas_token']['role']}**")
+st.sidebar.write(f"Corporate entity: **{st.session_state['saas_token']['tenant_name']}**")
+st.sidebar.write("---")
+if st.sidebar.button("🔒 Terminate Cloud Access Link", use_container_width=True):
+    st.session_state["saas_token"] = {"logged_in": False, "role": None, "tenant_id": None, "tenant_name": None}
+    st.rerun()
 
-m1, m2, m3 = st.columns(3)
-m1.metric("Total Ledger Capital Collections", f"PKR {gross_rev:,} /-")
-m2.metric("Suspended Terminals", f"{total_suspended} Nodes")
-m3.metric("System Core Status", "ONLINE (100% Sync)")
 
-st.write("---")
-
-tab_billing, tab_pro_rata, tab_clients = st.tabs([
-    "🏦 General Ledger & Invoice Desk", 
-    "📊 Pro-Rata Account Engine", 
-    "🔌 Client Provision Routing"
-])
-
-# ADVANCED TAB 1: DEBIT / CREDIT LEDGER VIEW
-with tab_billing:
-    st.markdown("### 📜 Double-Entry System Invoices")
-    cursor.execute("""
-        SELECT i.*, c.name, c.account_balance 
-        FROM invoices i 
-        JOIN corporate_clients c ON i.client_id = c.id
-    """)
-    all_invoices = cursor.fetchall()
+# ==================== PORTAL VIEW 1: SUPER ADMIN CONTROL ROOM (Aapka Dashboard) ====================
+if st.session_state["saas_token"]["role"] == "Super_Admin":
+    st.markdown("## 👑 Super-Admin SaaS Revenue Command Module")
+    st.write("Yahan se aap Pakistan bhar ke saare ISPs aur unki subscription fees control karte hain.")
     
-    for inv in all_invoices:
-        bal_class = "ledger-credit" if inv["account_balance"] >= 0 else "ledger-debit"
-        with st.markdown(f"""
-            <div class='invoice-box'>
-                <table style='width:100%; border:none;'>
-                    <tr>
-                        <td style='width:50%;'>
-                            <h4 style='margin:0; color:#38bdf8;'>Invoice: {inv['invoice_num']} [{inv['type']}]</h4>
-                            <p style='margin:4px 0;'>Client: <b>{inv['name']}</b> (ID: {inv['client_id']})</p>
-                            <p style='margin:4px 0;'>Issue Date: <code>{inv['date_generated']}</code> | Due Date: <code>{inv['due_date']}</code></p>
-                        </td>
-                        <td style='text-align:right; vertical-align:top;'>
-                            <p style='margin:0;'>Amount Due: <b>{inv['amount_due']} PKR</b></p>
-                            <p style='margin:4px 0;'>Amount Cleared: <b style='color:#4ade80;'>{inv['amount_paid']} PKR</b></p>
-                            <p style='margin:4px 0;'>Current Wallet Ledger: <span class='{bal_class}'>{inv['account_balance']} PKR</span></p>
-                            <p style='margin:4px 0;'>Status Code: <u><b>{inv['status']}</b></u></p>
-                        </td>
-                    </tr>
-                </table>
-            </div>
-        """, unsafe_allow_html=True):
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    # Platform Analytics Metrics
+    cursor.execute("SELECT COUNT(*) FROM tenants")
+    total_isps = cursor.fetchone()[0]
+    cursor.execute("SELECT COUNT(*) FROM global_subscribers")
+    total_global_users = cursor.fetchone()[0]
+    
+    col_s1, col_s2, col_s3 = st.columns(3)
+    col_s1.metric("Total Client ISPs Registered", f"{total_isps} Companies")
+    col_s2.metric("Total End-User Network Nodes", f"{total_global_users} Active Customers")
+    col_s3.metric("SaaS Platform Status", "LICENSED & SECURE")
+    
+    st.write("---")
+    
+    t_manage_isp, t_add_isp = st.tabs(["🗺️ Active ISP Core Directory", "➕ Provision New Client ISP Company"])
+    
+    with t_manage_isp:
+        cursor.execute("SELECT * FROM tenants")
+        all_tenants = cursor.fetchall()
+        
+        for tenant in all_tenants:
+            st.markdown(f"""
+                <div class='isp-card'>
+                    <h3 style='margin:0; color:#00f0ff;'>🏢 ISP Name: {tenant['isp_name']}</h3>
+                    <p style='margin:5px 0;'>System Owner: <b>{tenant['owner_name']}</b> | Helpline: <b>{tenant['contact_phone']}</b></p>
+                    <p style='margin:5px 0;'>SaaS Sub-License Expiry Lock: <code style='color:#ffdd67;'>{tenant['license_expiry']}</code> | Status Protocol: <b>{tenant['account_status']}</b></p>
+                </div>
+            """, unsafe_allow_html=True)
             
-            c_pay1, c_pay2 = st.columns([3, 1])
-            with c_pay1:
-                pay_amt = st.number_input(f"Enter Payment Collection for {inv['invoice_num']}", min_value=0, step=100, key=f"amt_{inv['invoice_num']}")
-            with c_pay2:
+            # Action controls to manage separate business platforms
+            c_ac1, c_ac2 = st.columns([2, 1])
+            with c_ac1:
+                status_toggle = st.selectbox(f"Modify Licensing Protocol for {tenant['isp_name']}", ["Active", "Suspended / Blocked"], key=f"t_status_{tenant['id']}")
+            with c_ac2:
                 st.write("<br>", unsafe_allow_html=True)
-                if st.button("Post Transaction Ledger", key=f"btn_{inv['invoice_num']}", use_container_width=True):
-                    if pay_amt > 0:
-                        # Professional Ledger Math: Calculate new balance adjustments
-                        new_paid_total = inv["amount_paid"] + pay_amt
-                        new_status = "Paid" if new_paid_total >= inv["amount_due"] else "Partial"
-                        
-                        # Update Invoice Account
-                        cursor.execute("UPDATE invoices SET amount_paid=?, status=? WHERE invoice_num=?", (new_paid_total, new_status, inv["invoice_num"]))
-                        
-                        # Adjust Client Wallet Balance Table
-                        balance_adjustment = pay_amt - (inv["amount_due"] - inv["amount_paid"])
-                        cursor.execute("UPDATE corporate_clients SET account_balance = account_balance + ? WHERE id=?", (balance_adjustment, inv["client_id"]))
-                        
+                if st.button("Apply Security Rule", key=f"t_btn_{tenant['id']}", use_container_width=True):
+                    cursor.execute("UPDATE tenants SET account_status=? WHERE id=?", (status_toggle, tenant["id"]))
+                    conn.commit()
+                    st.success(f"Security Matrix Modified for {tenant['isp_name']}!")
+                    st.rerun()
+
+    with t_add_isp:
+        st.markdown("### ➕ Onboard New Broadband Provider Sub-License")
+        with st.form("add_isp_form", clear_on_submit=True):
+            new_isp_name = st.text_input("Broadband Company Name (e.g., Jhelum Fiber)")
+            new_isp_owner = st.text_input("Managing Director Legal Name")
+            new_isp_phone = st.text_input("Primary Office WhatsApp Line")
+            new_isp_expiry = st.date_input("SaaS License Expiry Term Limit")
+            
+            if st.form_submit_button("Inject Tenant Partition into Cloud"):
+                if new_isp_name and new_isp_owner:
+                    try:
+                        cursor.execute("INSERT INTO tenants (isp_name, owner_name, contact_phone, license_expiry, account_status) VALUES (?, ?, ?, ?, 'Active')",
+                                       (new_isp_name, new_isp_owner, new_isp_phone, new_isp_expiry.strftime("%Y-%m-%d")))
                         conn.commit()
-                        st.success(f"Ledger Verified for {inv['invoice_num']}!")
+                        st.success(f"Database Partition Built for '{new_isp_name}'. Account Password is set to '1234' by default.")
+                        st.rerun()
+                    except sqlite3.IntegrityError:
+                        st.error("Operation Rejected: Corporate label already allocated in network nodes.")
+    conn.close()
+
+
+# ==================== PORTAL VIEW 2: TENANT ISP WORKSTATION (Aapke Customers Ka Panel) ====================
+elif st.session_state["saas_token"]["role"] == "ISP_Tenant":
+    current_isp_id = st.session_state["saas_token"]["tenant_id"]
+    st.markdown(f"## 🏢 Corporate Workspace Panel: <span style='color:#00f0ff;'>{st.session_state['saas_token']['tenant_name']}</span>", unsafe_allow_html=True)
+    st.write("Yeh aapka apna portal hai jahan har ISP sirf aur sirf apna alag data chalayega.")
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    # Isolated Database Extraction for Current Active Tenant Only
+    cursor.execute("SELECT COUNT(*) FROM global_subscribers WHERE isp_id=?", (current_isp_id,))
+    tenant_users = cursor.fetchone()[0]
+    cursor.execute("SELECT SUM(amount_processed) FROM dynamic_ledger WHERE isp_id=? AND status='Paid'", (current_isp_id,))
+    tenant_rev = cursor.fetchone()[0] or 0
+    
+    col_t1, col_t2 = st.columns(2)
+    col_t1.metric("Your Active Subscriber Loops", f"{tenant_users} Registered Nodes")
+    col_t2.metric("Your Monthly Gross Collections", f"PKR {tenant_rev:,} /-")
+    
+    st.write("---")
+    
+    t_client_ledger, t_add_client = st.tabs(["📜 Secure Client Billing Registry", "🔌 Register New Node Subscriber"])
+    
+    with t_client_ledger:
+        cursor.execute("""
+            SELECT s.*, l.amount_processed, l.billing_month, l.status as payment_status, l.id as ledger_id
+            FROM global_subscribers s
+            LEFT JOIN dynamic_ledger l ON s.customer_id = l.customer_id AND s.isp_id = l.isp_id
+            WHERE s.isp_id=?
+        """, (current_isp_id,))
+        my_clients = cursor.fetchall()
+        
+        for cli in my_clients:
+            badge_class = "badge-paid" if cli["payment_status"] == "Paid" else "badge-unpaid"
+            with st.markdown(f"""
+                <div class='isp-card'>
+                    <h4 style='margin:0; color:#ffffff;'>Client: {cli['name']} <code style='color:#00f0ff;'>[{cli['customer_id']}]</code></h4>
+                    <p style='margin:5px 0; color:#8b949e;'>Network Sector Area: <b>{cli['area']}</b> | Bandwidth Profile: <b>{cli['package']}</b></p>
+                    <p style='margin:5px 0; color:#8b949e;'>Billing Invoice Term: <b>{cli['billing_month']}</b> &nbsp;&nbsp;&nbsp;&nbsp; Current Dues Check: <span class='{badge_class}'>{cli['payment_status']} ({cli['tariff']} PKR)</span></p>
+                </div>
+            """, unsafe_allow_html=True):
+                
+                if cli["payment_status"] != "Paid":
+                    if st.button(f"Post Collection Receipt for {cli['customer_id']}", key=f"pay_node_{cli['ledger_id']}", use_container_width=True):
+                        cursor.execute("UPDATE dynamic_ledger SET status='Paid' WHERE id=?", (cli["ledger_id"],))
+                        conn.commit()
+                        st.success(f"Payment entry synchronized into system ledger database for account {cli['customer_id']}.")
                         st.rerun()
 
-# ADVANCED TAB 2: PRO-RATA UTILITY CALCULATOR ENGINE
-with tab_pro_rata:
-    st.markdown("### 📊 Pro-Rata Mid-Month Bill Token Generator")
-    st.write("Jab koi customer mahine ke darmyan mein aaye, to unke bache hue dinon ka tariff nikalne ka automated engine:")
-    
-    col_p1, col_p2, col_p3 = st.columns(3)
-    with col_p1:
-        base_tariff = st.number_input("Standard Package Monthly Tariff (PKR)", min_value=1000, step=500, value=1500)
-    with col_p2:
-        activation_date = st.date_input("Activation Live Date Slot")
-    with col_p3:
-        # Compute exact days remaining in current running month
-        year = activation_date.year
-        month = activation_date.month
-        total_days_in_month = calendar.monthrange(year, month)[1]
-        days_remaining = total_days_in_month - activation_date.day + 1
-        
-        # Pro-rata formula math
-        pro_rata_bill = int((base_tariff / total_days_in_month) * days_remaining)
-        
-        st.metric("Calculated Days Remaining", f"{days_remaining} Days")
-        st.metric("Partial Pro-Rata Debit Amount", f"{pro_rata_bill} PKR")
-
-# ADVANCED TAB 3: EXECUTIVE PROVISIONING SYSTEM
-with tab_clients:
-    st.markdown("### ➕ Corporate Fiber Line Client Provisioning")
-    with st.form("provision_form", clear_on_submit=True):
-        f_id = st.text_input("System Generation Client ID (Unique Token)")
-        f_name = st.text_input("Account Holder Legal Name")
-        f_phone = st.text_input("WhatsApp Comms String (+92...)")
-        f_area = st.text_input("Network Grid Sector Location")
-        f_pkg = st.selectbox("Bandwidth Node Profile", ["10 Mbps Line", "20 Mbps Line", "50 Mbps Dedicated Dedicated"])
-        f_tariff = st.number_input("Agreed Monthly Base Tariff", min_value=0, step=500, value=1500)
-        
-        if st.form_submit_button("Authorize and Inject Profile into Core"):
-            if f_id and f_name and f_phone:
-                try:
-                    cursor.execute("INSERT INTO corporate_clients VALUES (?, ?, ?, ?, ?, ?, 0, 'Active')", (f_id, f_name, f_phone, f_area, f_pkg, f_tariff))
+    with t_add_client:
+        st.markdown("### 🔌 Register New Node Under Your Corporate Account")
+        with st.form("isp_cust_form", clear_on_submit=True):
+            i_cid = st.text_input("Customer ID Account Block (e.g., LX-500)")
+            i_name = st.text_input("Subscriber Full Legal Name")
+            i_phone = st.text_input("WhatsApp Comms Line")
+            i_area = st.text_input("Regional Distribution Grid Sector")
+            i_pkg = st.selectbox("Allocated Bandwidth Profile", ["10 Mbps", "20 Mbps", "50 Mbps Dedicated"])
+            i_tariff = st.number_input("Monthly Line Access Charge (PKR)", min_value=0, step=100, value=1500)
+            
+            if st.form_submit_button("Inject Subscriber Profile into Your Matrix"):
+                if i_cid and i_name and i_phone:
+                    cursor.execute("INSERT INTO global_subscribers (isp_id, customer_id, name, phone, area, package, tariff, next_due_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                                   (current_isp_id, i_cid, i_name, i_phone, i_area, i_pkg, i_tariff, (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")))
                     
-                    # Automatically generate current month's first general debit invoice block
-                    inv_uid = f"INV-{datetime.now().strftime('%Y%m')}-{f_id}"
-                    due_date_calc = (datetime.now() + timedelta(days=10)).strftime("%Y-%m-%d")
-                    cursor.execute("INSERT INTO invoices VALUES (?, ?, ?, ?, ?, 0, 'Unpaid', 'Initial Provision')", (inv_uid, f_id, datetime.now().strftime("%Y-%m-%d"), due_date_calc, f_tariff))
-                    
+                    # Generate starting monthly balance ledger invoice voucher statement bound to current isp id
+                    cursor.execute("INSERT INTO dynamic_ledger (isp_id, customer_id, date_posted, amount_processed, billing_month, status) VALUES (?, ?, ?, ?, ?, 'Unpaid')",
+                                   (current_isp_id, i_cid, today_iso, i_tariff, datetime.now().strftime("%B %Y")))
                     conn.commit()
-                    st.success(f"Client Account {f_id} and its General Ledger successfully initialized!")
+                    st.success("Subscriber Profile Configured and Deployed in Your Dedicated Secure Cloud Node Ledger.")
                     st.rerun()
-                except sqlite3.IntegrityError:
-                    st.error("Token Collision: Client ID matches an existing corporate network path node.")
-                    
     conn.close()
