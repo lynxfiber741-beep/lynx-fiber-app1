@@ -377,3 +377,190 @@ if user_data["role"] == "isp_owner":
 elif user_data["role"] == "super_admin":
     st.title("🌐 SaaS Platforms Global Control Tower Console")
     st.write("Welcome, Master Controller. All systems functional.")
+    # ====================================================================
+# STEP 4: BILLING ENGINE, MONTHLY INVOICE LEDGER & RECOVERY CONTROLLER
+# ====================================================================
+
+# Yeh code aapke existing 'if user_data["role"] == "isp_owner":' ke navigation tabs ke andar mazeed tabs barhayega.
+# Hum upar wale st.tabs ko update kar rahe hain taaki naye features smoothly link ho sakein.
+
+# Pehle se mojood tabs ke sath in do naye tabs ko bi include karlein jahan tabs declare huay hain:
+# menu_tabs = st.tabs(["👤 Provision New Subscriber", "📍 Manage Network Areas", "📋 Live Subscriber Directory", "⚙️ Run Monthly Billing", "💰 Billing & Recovery Ledger"])
+
+# --- DATABASE LOGIC FOR BILLING OPERATIONS ---
+def generate_bulk_invoices_for_month(comp_id, target_month):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # 1. Fetch all active subscribers for this company
+    cursor.execute("SELECT * FROM subscribers WHERE company_id=? AND status='Active'", (comp_id,))
+    subscribers = cursor.fetchall()
+    
+    generated_count = 0
+    skipped_count = 0
+    
+    for sub in subscribers:
+        cust_id = sub["custom_cust_id"]
+        
+        # Check if invoice already exists for this customer and this month to prevent duplicate billing
+        cursor.execute("SELECT COUNT(*) FROM invoices_ledger WHERE company_id=? AND custom_cust_id=? AND billing_month=?", (comp_id, cust_id, target_month))
+        if cursor.fetchone()[0] > 0:
+            skipped_count += 1
+            continue
+            
+        # Calculate Current Month Bill based on Tariff rates
+        current_bill = float(sub["internet_amount"] or 0) + float(sub["cable_amount"] or 0)
+        
+        # Fetch Outstanding Previous Dues from the immediate last invoice (if any)
+        cursor.execute("""
+            SELECT (total_payable - amount_paid) as outstanding 
+            FROM invoices_ledger 
+            WHERE company_id=? AND custom_cust_id=? 
+            ORDER BY invoice_id DESC LIMIT 1
+        """, (comp_id, cust_id))
+        last_invoice = cursor.fetchone()
+        previous_dues = float(last_invoice["outstanding"]) if last_invoice else 0.0
+        
+        total_payable = previous_dues + current_bill
+        
+        # Insert finalized invoice row into the ledger
+        cursor.execute("""
+            INSERT INTO invoices_ledger (
+                company_id, custom_cust_id, billing_month, previous_dues, 
+                current_bill, total_payable, amount_paid, payment_status
+            ) VALUES (?, ?, ?, ?, ?, ?, 0.0, 'Unpaid')
+        """, (comp_id, cust_id, target_month, previous_dues, current_bill, total_payable))
+        
+        generated_count += 1
+        
+    conn.commit()
+    conn.close()
+    return generated_count, skipped_count
+
+def update_invoice_payment(invoice_id, paid_amount, collector_id=None):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Fetch original total payable amount
+    cursor.execute("SELECT total_payable FROM invoices_ledger WHERE invoice_id=?", (invoice_id,))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        return False
+        
+    total_payable = float(row["total_payable"])
+    
+    # Determine absolute status based on verification parameters
+    if paid_amount >= total_payable:
+        status = "Paid"
+    elif paid_amount > 0:
+        status = "Partial"
+    else:
+        status = "Unpaid"
+        
+    cursor.execute("""
+        UPDATE invoices_ledger 
+        SET amount_paid=?, payment_status=?, collected_by=?, date_collected=?
+        WHERE invoice_id=?
+    """, (paid_amount, status, collector_id, datetime.now().date(), invoice_id))
+    
+    conn.commit()
+    conn.close()
+    return True
+
+
+# --- MODIFIED ISP NAVIGATION PANEL WITH INCLUDED BILLING MODULES ---
+# Purane menu_tabs line ko is line se replace karlein jo neeche di gayi hai:
+if user_data["role"] == "isp_owner":
+    # Refreshed tabs array
+    menu_tabs = st.tabs([
+        "👤 Provision New Subscriber", 
+        "📍 Manage Network Areas", 
+        "📋 Live Subscriber Directory",
+        "⚙️ Run Monthly Billing",
+        "💰 Billing & Recovery Ledger"
+    ])
+
+    # Note: Tab 0, 1, aur 2 ka code aapka wahi rahega jo Step 3 mein tha. 
+    # Hum seedha chalte hain Tab 3 aur Tab 4 ki initialization par:
+
+    # ----------------------------------------------------------------
+    # TAB 4: BULK MONTHLY BILL GENERATION ENGINE
+    # ----------------------------------------------------------------
+    with menu_tabs[3]:
+        st.markdown("<h3 style='color: #00f0ff;'>⚙️ Automated Monthly Invoicing System</h3>", unsafe_allow_html=True)
+        st.write("Is module se aap poore system ke active users ka bill single-click par generate kar sakte hain.")
+        
+        # Select target billing month dynamic selection
+        current_year = datetime.now().year
+        months_list = [f"{m} {current_year}" for m in ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]]
+        
+        # Default select current month index contextually
+        current_month_name = datetime.now().strftime("%B %Y")
+        default_idx = months_list.index(current_month_name) if current_month_name in months_list else 0
+        
+        target_month = st.selectbox("Select Target Billing Cycle Month", options=months_list, index=default_idx)
+        
+        if st.button("🚀 Trigger Bulk Invoicing Run", use_container_width=True):
+            with st.spinner("Processing system ledgers and compiling outstanding balances..."):
+                gen, skip = generate_bulk_invoices_for_month(current_company, target_month)
+                st.success(f"🎉 Processing Complete! Generated: **{gen}** new invoices. Skipped: **{skip}** entries (Already exist).")
+                st.rerun()
+
+    # ----------------------------------------------------------------
+    # TAB 5: LIVE RECOVERY LEDGER & COLLECTION MANAGER
+    # ----------------------------------------------------------------
+    with menu_tabs[4]:
+        st.markdown("<h3 style='color: #00f0ff;'>💰 Central Accounts Recovery Ledger</h3>", unsafe_allow_html=True)
+        
+        # Filter ledger view by network system
+        f_areas = fetch_company_areas(current_company)
+        area_options = ["All Areas"] + list(f_areas["area_name"].values)
+        selected_filter_area = st.selectbox("Filter Ledger List by System Node", options=area_options)
+        
+        conn = get_db_connection()
+        
+        query = """
+            SELECT i.invoice_id, i.custom_cust_id as [User ID], s.name as [Subscriber], 
+                   a.area_name as [Area], i.billing_month as [Month], i.previous_dues as [Prev Dues], 
+                   i.current_bill as [Current Bill], i.total_payable as [Net Payable], 
+                   i.amount_paid as [Amount Paid], i.payment_status as [Status]
+            FROM invoices_ledger i
+            JOIN subscribers s ON i.custom_cust_id = s.custom_cust_id AND i.company_id = s.company_id
+            LEFT JOIN network_areas a ON s.area_id = a.area_id
+            WHERE i.company_id = ?
+        """
+        
+        if selected_filter_area != "All Areas":
+            query += " AND a.area_name = ?"
+            ledger_df = pd.read_sql_query(query, conn, params=(current_company, selected_filter_area))
+        else:
+            ledger_df = pd.read_sql_query(query, conn, params=(current_company,))
+            
+        conn.close()
+        
+        if ledger_df.empty:
+            st.info("No invoice records found for the selection. Please run the billing engine first.")
+        else:
+            # Display interactive dataframe with status highlights
+            st.dataframe(ledger_df, use_container_width=True, hide_index=True)
+            
+            st.write("---")
+            st.markdown("#### 💵 Manual Collection Overrides (Receive Payment From Desk)")
+            
+            # Select specific invoice to pay
+            invoice_ids = ledger_df["invoice_id"].tolist()
+            selected_inv_id = st.selectbox("Select Invoice ID to Update Payment", options=invoice_ids)
+            
+            # Show details of selected invoice
+            selected_row = ledger_df[ledger_df["invoice_id"] == selected_inv_id].iloc[0]
+            st.warning(f"Updating payment for **{selected_row['Subscriber']}** ({selected_row['User ID']}). Total Outstanding: **PKR {selected_row['Net Payable']}**")
+            
+            with st.form("payment_collection_form"):
+                cash_received = st.number_input("Enter Amount Received (PKR)", min_value=0.0, max_value=float(selected_row['Net Payable']), value=float(selected_row['Net Payable']))
+                submit_payment = st.form_submit_button("💰 Record Collection Receipt")
+                
+                if submit_payment:
+                    if update_invoice_payment(selected_inv_id, cash_received, collector_id=None):
+                        st.success(f"Payment updated successfully for Invoice #{selected_inv_id}!")
+                        st.rerun()
