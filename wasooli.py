@@ -31,6 +31,8 @@ if "isp_id" not in st.session_state:
     st.session_state["isp_id"] = None
 if "isp_name" not in st.session_state:
     st.session_state["isp_name"] = ""
+if "branding_mode" not in st.session_state:
+    st.session_state["branding_mode"] = "Lynx Branding"
 
 # --- PORTAL GATEWAY (LOGIN / SIGNUP SCREEN) ---
 if not st.session_state["isp_logged_in"]:
@@ -60,6 +62,8 @@ if not st.session_state["isp_logged_in"]:
                                 st.session_state["isp_logged_in"] = True
                                 st.session_state["isp_id"] = res.data[0]["id"]
                                 st.session_state["isp_name"] = res.data[0]["company_name"]
+                                # Store branding configuration for the session
+                                st.session_state["branding_mode"] = res.data[0].get("branding_mode", "Lynx Branding")
                                 st.success(f"🔒 Access Granted! Welcome {st.session_state['isp_name']}")
                                 st.rerun()
                             else:
@@ -69,17 +73,23 @@ if not st.session_state["isp_logged_in"]:
                     else:
                         st.warning("⚠️ Dono khane bharna zaroori hain.")
 
-        # --- TAB 2: SIGN UP (WITH YOUR CONTACT NUMBERS) ---
+        # --- TAB 2: SIGN UP (WITH BRANDING SELECTOR) ---
         with tab_signup:
-            # 📢 Custom Branded Notice with your provided numbers
             st.info("📢 **Notice:** Agar aap is app par apni company ka billing setup register karna chahte hain, to approval code aur activation ke liye **LYNX Fiber** company se rabta karein.\n\n📞 **Contact Numbers:**\n* **0331-5336673**\n* **0321-5943786**")
             
             with st.form("isp_signup_form"):
-                st.markdown("<p style='text-align: center; color: green; font-weight: bold;'>Create Your Isolated Billing Portal</p>", unsafe_allow_html=True)
+                st.markdown("<p style='text-align: center; color: green; font-weight: bold;'>Create Isolated Billing Portal</p>", unsafe_allow_html=True)
                 new_isp_name = st.text_input("🏢 Company Name (e.g., Lynx Fiber Pvt Ltd)")
                 new_isp_user = st.text_input("👤 Desired Admin Username (Unique)")
                 new_isp_phone = st.text_input("📞 Phone / Contact Number")
                 new_isp_pass = st.text_input("🔒 Set Login Password", type="password")
+                
+                # Dynamic Control Selector for you
+                selected_branding = st.selectbox(
+                    "🎯 Select Application Branding Mode (For LYNX Admin Use)",
+                    ["Lynx Branding", "Own Branding"],
+                    help="Lynx Branding: Client will see LYNX Fiber everywhere. Own Branding: Client will see their own company name."
+                )
                 
                 input_approval_code = st.text_input("🔑 Admin Approval Code / License Key", type="password", placeholder="Enter code received from LYNX Fiber")
                 
@@ -88,19 +98,20 @@ if not st.session_state["isp_logged_in"]:
                 if btn_signup:
                     if new_isp_name and new_isp_user and new_isp_pass and input_approval_code:
                         if input_approval_code != MASTER_APPROVAL_CODE:
-                            st.error("❌ Invalid Approval Code! Aapko account banane ki ijazat nahi hai. Meherbani karke upar diye gaye numbers par LYNX Admin se rabta karke code hasil karein.")
+                            st.error("❌ Invalid Approval Code! LYNX Admin se rabta karke sahi code hasil karein.")
                         else:
                             try:
                                 signup_data = {
                                     "company_name": new_isp_name,
                                     "username": new_isp_user,
                                     "password": new_isp_pass,
-                                    "phone": new_isp_phone
+                                    "phone": new_isp_phone,
+                                    "branding_mode": selected_branding # Saves your choice into cloud database
                                 }
                                 supabase.table("isp_companies").insert(signup_data).execute()
-                                st.success("🎉 Account Created Successfully! Ab Sign In wale tab par ja kar login karein.")
-                            except Exception:
-                                st.error("❌ Yeh Username pehle se maujood hai! Koi naya username rukhain.")
+                                st.success(f"🎉 Account Created Successfully with [{selected_branding}]! Ab Sign In wale tab par ja kar login karein.")
+                            except Exception as e:
+                                st.error(f"❌ Error: Username pehle se maujood hai ya setup fail hua. ({e})")
                     else:
                         st.warning("⚠️ Meherbani karke saari details samet Approval Code lazmi bharein.")
                         
@@ -110,15 +121,20 @@ if not st.session_state["isp_logged_in"]:
 else:
     my_isp_id = st.session_state["isp_id"]
     my_isp_name = st.session_state["isp_name"]
+    current_branding = st.session_state["branding_mode"]
     
-    st.title(f"⚡ {my_isp_name} - Control Panel")
-    st.caption(f"Logged in securely | Powered by LYNX Fiber Core | Cycle: {current_month} {current_year}")
+    # Decide dynamic display title based on your admin setting
+    display_title = my_isp_name if current_branding == "Own Branding" else "LYNX Fiber"
+    
+    st.title(f"⚡ {display_title} - Control Panel")
+    st.caption(f"Logged in securely as {my_isp_name} | Powered by LYNX Fiber Core System | Cycle: {current_month} {current_year}")
     st.markdown("---")
     
     if st.sidebar.button("🔒 Secure Logout", use_container_width=True):
         st.session_state["isp_logged_in"] = False
         st.session_state["isp_id"] = None
         st.session_state["isp_name"] = ""
+        st.session_state["branding_mode"] = "Lynx Branding"
         st.rerun()
         
     st.sidebar.header("➕ Customer Operations")
