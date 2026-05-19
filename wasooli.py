@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 from supabase import create_client, Client
 
-# --- DITTO WASOOLI PK - MATCHING SCREENSHOT UI LAYOUT ---
+# --- DITTO WASOOLI PK - CLEAN ISP PRODUCTION PORTAL ---
 st.set_page_config(page_title="LYNX Fiber - Advanced ISP Portal", layout="wide", page_icon="⚡")
 
 # Custom UI/CSS Injection according to screenshot styling
@@ -32,16 +32,10 @@ st.markdown("""
     .metric-sub-green { font-size: 12px; color: #16a34a; font-weight: bold; margin-top: 2px; }
     .metric-sub-red { font-size: 12px; color: #dc2626; font-weight: bold; margin-top: 2px; }
     
-    /* Section Headings Styling matching screenshot icons */
+    /* Section Headings Styling */
     .screenshot-section-title {
         font-size: 22px; font-weight: bold; color: #1e293b; margin-top: 25px; margin-bottom: 15px;
         display: flex; align-items: center; gap: 8px; font-family: 'Arial', sans-serif;
-    }
-    
-    /* Customer Card UI Renderer */
-    .customer-card {
-        background: white; padding: 15px 25px; border-radius: 6px; border: 1px solid #e2e8f0;
-        margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.01);
     }
 </style>
 """, unsafe_allow_html=True)
@@ -112,36 +106,24 @@ if not st.session_state["logged_in"]:
                         st.rerun()
                     else: st.error("❌ Owner Credentials Error.")
 
-        with tab_register:
-            with st.form("signup_master_form"):
-                r_company = st.text_input("Company Corporate Name")
-                r_user = st.text_input("Desired Admin Username")
-                r_phone = st.text_input("Official Phone No")
-                r_pass = st.text_input("Set Password", type="password")
-                r_brand = st.selectbox("Branding Mode Pack", ["Lynx Branding", "Own Branding"])
-                r_key = st.text_input("Master Activation Code", type="password")
-                if st.form_submit_button("Register & Deploy Network", use_container_width=True):
-                    if r_key != MASTER_APPROVAL_CODE: st.error("❌ Invalid Key.")
-                    else:
-                        supabase.table("isp_companies").insert({"company_name": r_company, "username": r_user, "password": r_pass, "phone": r_phone, "branding_mode": r_brand}).execute()
-                        st.success("🎉 Registered successfully!")
-
 # --- LIVE OPERATIONS INTERFACE ---
 else:
     my_isp_id = st.session_state["isp_id"]
     is_admin = (st.session_state["user_role"] == "Admin")
     current_operator = st.session_state["operator_name"]
     
-    # --- AUTOMATIC BACKGROUND BILLING ENGINE ---
+    # --- AUTOMATIC BACKGROUND EXPIRY CHECK ENGINE ---
     raw_users_check = supabase.table("billing_users").select("*").eq("isp_id", my_isp_id).execute()
     if len(raw_users_check.data) > 0:
         for u in raw_users_check.data:
             user_expiry = datetime.strptime(u["expiry_date"], "%Y-%m-%d").date()
             if today_date > user_expiry and u["status"] == "Paid":
                 new_expiry = user_expiry + timedelta(days=30)
+                updated_prev_balance = float(u["previous_balance"] if u["previous_balance"] else 0) + float(u["current_bill"] if u["current_bill"] else 0)
+                
                 supabase.table("billing_users").update({
                     "status": "Unpaid",
-                    "previous_balance": float(u["previous_balance"]) + float(u["current_bill"]),
+                    "previous_balance": updated_prev_balance,
                     "expiry_date": str(new_expiry)
                 }).eq("id", u["id"]).execute()
                 st.rerun()
@@ -152,7 +134,7 @@ else:
         
     st.sidebar.subheader("⚙️ Customer Operations")
     
-    # 1. Manual Entry Matching Left Sidebar Input Structure
+    # Manual Single Entry Panel
     with st.sidebar.expander("📝 Naya Customer Add Karein", expanded=True):
         with st.form("manual_add_screenshot_form", clear_on_submit=True):
             n_name = st.text_input("Customer Name")
@@ -161,89 +143,107 @@ else:
             n_area = st.text_input("Area / Sector Colony")
             n_bill = st.number_input("Monthly Bill (Rs.)", min_value=0, step=100, value=0)
             n_prev = st.number_input("Previous Pending Balance (Optional)", min_value=0, step=100, value=0)
-            n_days = st.number_input("Validity Days (Default 30)", min_value=1, value=30)
             
             if st.form_submit_button("Save Customer", use_container_width=True):
                 if n_name and n_user and n_area and n_bill > 0:
-                    calc_expiry = today_date + timedelta(days=int(n_days))
+                    calc_expiry = today_date + timedelta(days=30) # Automatic 1-month validity lock
                     supabase.table("billing_users").insert({
                         "isp_id": my_isp_id, "name": n_name, "username": n_user, "phone": n_phone,
-                        "area": n_area, "previous_balance": n_prev, "current_bill": n_bill, 
+                        "area": n_area, "previous_balance": float(n_prev), "current_bill": float(n_bill), 
                         "status": "Unpaid", "reg_date": str(today_date), "expiry_date": str(calc_expiry)
                     }).execute()
                     st.rerun()
 
-    # 2. Bulk Upload Engine with Fake Test Data Generation Feature
+    # 📥 SMART CLEAN EXCEL DYNAMIC UPLOADER ENGINE
     if is_admin:
-        with st.sidebar.expander("📥 Bulk Upload (Excel / CSV)", expanded=False):
-            st.caption("Excel ya CSV file upload karein. Columns scheme nache di gayi hai:")
-            st.code("name,username,phone,area,current_bill,previous_balance,expiry_days")
+        with st.sidebar.expander("📥 Bulk Upload Excel / CSV", expanded=True):
+            st.caption("Apni Excel/CSV sheet upload karein. Base columns mandatory hain:")
+            st.code("name, username, area, current_bill")
+            st.caption("Optional columns: `phone`, `previous_balance`")
             
-            # --- FAKE DATA GENERATOR BUTTON FOR BLANK SYSTEM TESTING ---
-            if st.button("🎭 Inject Temporary Fake Data (3 Clients)", use_container_width=True):
-                fake_samples = [
-                    {"name": "Umer Wazir", "username": "umer (37301-7910445-9)", "phone": "03118808741", "area": "Sanghoi", "current_bill": 1200, "previous_balance": 0, "expiry_date": str(today_date + timedelta(days=30))},
-                    {"name": "Ali Raza", "username": "ali.lynx", "phone": "03215544332", "area": "Saeela System", "current_bill": 1500, "previous_balance": 500, "expiry_date": str(today_date + timedelta(days=30))},
-                    {"name": "Zain Ahmed", "username": "zain.fiber", "phone": "03009988776", "area": "Sanghoi", "current_bill": 1000, "previous_balance": 0, "expiry_date": str(today_date - timedelta(days=2))} # Automatically expired/Unpaid
-                ]
-                for fs in fake_samples:
-                    # Injecting with ignore duplicates constraint logic
-                    try:
-                        supabase.table("billing_users").insert({
-                            "isp_id": my_isp_id, "name": fs["name"], "username": fs["username"], "phone": fs["phone"],
-                            "area": fs["area"], "current_bill": fs["current_bill"], "previous_balance": fs["previous_balance"],
-                            "status": "Unpaid", "expiry_date": fs["expiry_date"], "reg_date": str(today_date)
-                        }).execute()
-                    except: pass
-                st.success("Fake Sample Data Injected!")
-                st.rerun()
-                
-            uploaded_file = st.file_uploader("Choose File", type=["csv", "xlsx"])
+            uploaded_file = st.file_uploader("Choose Excel or CSV File", type=["csv", "xlsx"])
             if uploaded_file is not None:
                 try:
+                    # Multi-format reader block
                     if uploaded_file.name.endswith('.csv'): df_bulk = pd.read_csv(uploaded_file)
                     else: df_bulk = pd.read_excel(uploaded_file)
                     
-                    if st.button("🚀 Execute File Data Injection", use_container_width=True):
+                    # Column clean trimmer to avoid spaces bugs
+                    df_bulk.columns = df_bulk.columns.str.strip().str.lower()
+                    
+                    if st.button("🚀 Start Excel Data Injection", use_container_width=True):
                         success_count = 0
+                        error_count = 0
+                        
+                        # Process rows dynamically
                         for _, row in df_bulk.iterrows():
-                            days_valid = int(row['expiry_days']) if 'expiry_days' in row else 30
-                            row_expiry = today_date + timedelta(days=days_valid)
-                            
-                            supabase.table("billing_users").insert({
-                                "isp_id": my_isp_id, "name": str(row['name']), "username": str(row['username']),
-                                "phone": str(row['phone']) if 'phone' in row else "", "area": str(row['area']),
-                                "previous_balance": float(row['previous_balance']) if 'previous_balance' in row else 0,
-                                "current_bill": float(row['current_bill']), "status": "Unpaid",
-                                "reg_date": str(today_date), "expiry_date": str(row_expiry)
-                            }).execute()
-                            success_count += 1
-                        st.sidebar.success(f"Imported {success_count} entries successfully!")
+                            try:
+                                # Fallback checks for safe upload
+                                c_name = str(row['name']).strip()
+                                c_user = str(row['username']).strip()
+                                c_area = str(row['area']).strip()
+                                c_bill = float(row['current_bill'])
+                                
+                                # Optional checks to prevent crashing if blank
+                                c_phone = str(row['phone']).strip() if 'phone' in row and pd.notna(row['phone']) else ""
+                                c_prev = float(row['previous_balance']) if 'previous_balance' in row and pd.notna(row['previous_balance']) else 0.0
+                                
+                                # Automation Key: Automatically adds 30 days expiry from today's upload date
+                                auto_expiry_target = today_date + timedelta(days=30)
+                                
+                                supabase.table("billing_users").insert({
+                                    "isp_id": my_isp_id,
+                                    "name": c_name,
+                                    "username": c_user,
+                                    "phone": c_phone,
+                                    "area": c_area,
+                                    "previous_balance": c_prev,
+                                    "current_bill": c_bill,
+                                    "status": "Unpaid",
+                                    "reg_date": str(today_date),
+                                    "expiry_date": str(auto_expiry_target)
+                                }).execute()
+                                success_count += 1
+                            except Exception as row_err:
+                                error_count += 1
+                                continue
+                                
+                        st.sidebar.success(f"🎉 Imported {success_count} clients successfully!")
+                        if error_count > 0:
+                            st.sidebar.warning(f"⚠️ Skipped {error_count} bad rows/duplicates.")
                         st.rerun()
                 except Exception as e:
-                    st.sidebar.error("Header Mismatch Error. Use strict format.")
+                    st.sidebar.error("File Format Error: Headers correct rakhein.")
 
-    # Data Sync Streams
+    # Data Sync Pipelines
     users_resp = supabase.table("billing_users").select("*").eq("isp_id", my_isp_id).order("name").execute()
     history_resp = supabase.table("billing_history").select("*").eq("isp_id", my_isp_id).execute()
     df_users = pd.DataFrame(users_resp.data)
     df_history = pd.DataFrame(history_resp.data)
 
-    # --- SCREENSHOT REPLICA TOP COUNTERS ---
+    # --- COUNTERS LOGIC ---
     total_nodes = len(df_users) if not df_users.empty else 0
     paid_nodes = len(df_users[df_users['status'] == 'Paid']) if not df_users.empty else 0
     unpaid_nodes = len(df_users[df_users['status'] == 'Unpaid']) if not df_users.empty else 0
     
-    total_cash_recovered = df_history['amount'].sum() if not df_history.empty else 0
-    total_cash_remaining = df_users[df_users['status'] == 'Unpaid'].apply(lambda r: float(r['previous_balance'])+float(r['current_bill']), axis=1).sum() if not df_users.empty else 0
+    total_cash_recovered = float(df_history['amount'].sum()) if not df_history.empty else 0.0
+    
+    total_cash_remaining = 0.0
+    if not df_users.empty:
+        for idx, r in df_users.iterrows():
+            if r['status'] == 'Unpaid':
+                p_bal = float(r['previous_balance'] if r['previous_balance'] else 0.0)
+                c_bill = float(r['current_bill'] if r['current_bill'] else 0.0)
+                total_cash_remaining += (p_bal + c_bill)
 
+    # Output dynamic top bar row matching screenshot look
     st.markdown(f"""
     <div class="screenshot-metrics">
-        <div class="metric-item"><div class="metric-num">{total_nodes}</div></div>
+        <div class="metric-item"><div class="metric-num">{total_nodes}</div><div style="font-size:12px; color:#64748b;">Total Clients</div></div>
         <div class="metric-item"><div class="metric-num">{paid_nodes}</div><div class="metric-sub-green">↑ {paid_nodes} Recovered</div></div>
         <div class="metric-item"><div class="metric-num">{unpaid_nodes}</div><div class="metric-sub-red">↓ -{unpaid_nodes} Remaining</div></div>
-        <div class="metric-item"><div class="metric-num">Rs. {total_cash_recovered:,.0f}</div></div>
-        <div class="metric-item"><div class="metric-num">Rs. {total_cash_remaining:,.0f}</div></div>
+        <div class="metric-item"><div class="metric-num">Rs. {total_cash_recovered:,.0f}</div><div style="font-size:12px; color:#64748b;">Total Collected</div></div>
+        <div class="metric-item"><div class="metric-num">Rs. {total_cash_remaining:,.0f}</div><div style="font-size:12px; color:#64748b;">Total Outstanding</div></div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -254,47 +254,46 @@ else:
         areas_list = ["All Areas"] + list(df_users['area'].unique())
     sel_area = st.selectbox("Apna Sector/Area Select Karein:", areas_list, label_visibility="collapsed")
 
-    # Filtered dataset initialization
     filtered_users = df_users if sel_area == "All Areas" else df_users[df_users['area'] == sel_area]
 
     # --- CLIENT DIRECTORY & CASH COLLECTION PANEL ---
     st.markdown('<div class="screenshot-section-title">📋 Client Directory & Cash Collection</div>', unsafe_allow_html=True)
     
     if filtered_users.empty:
-        st.info("System blank hai ya is area mein koi user nahi hai. Fake data inject karne ke liye sidebar panel use karein.")
+        st.info("System khali hai. Apni Excel file upload karein aur kaam shuru karein!")
     else:
         for idx, row in filtered_users.iterrows():
-            p_val = float(row['previous_balance'])
-            c_val = float(row['current_bill'])
-            net_payable = p_val + c_val if row['status'] == 'Unpaid' else 0.0
+            p_val = float(row['previous_balance'] if row['previous_balance'] else 0.0)
+            c_val = float(row['current_bill'] if row['current_bill'] else 0.0)
+            net_payable = (p_val + c_val) if row['status'] == 'Unpaid' else 0.0
             
-            # Status badge selection matching screen
             if row['status'] == 'Paid':
                 status_badge = '<span style="color:#16a34a; font-weight:bold;">🟢 Paid</span>'
             else:
                 status_badge = '<span style="color:#dc2626; font-weight:bold;">🔴 Unpaid</span>'
                 
-            # Layout configuration for rows matching cards look precisely
             cc1, cc2 = st.columns([5, 1])
-            
             with cc1:
                 st.markdown(f"""
                 <div style="font-family:'Arial',sans-serif; font-size:15px; color:#334155; padding: 5px 0px;">
                     <b style="color:#0f172a; font-size:16px;">{row['name']}</b> ({row['username']}) &nbsp;|&nbsp; 
                     📍 {row['area']} &nbsp;|&nbsp; 📞 {row['phone'] if row['phone'] else 'N/A'} &nbsp;|&nbsp; 
-                    💵 Bill: Rs. {c_val:,.0f} &nbsp;|&nbsp; Status: {status_badge}
+                    💵 Net Due: <b>Rs. {net_payable:,.0f}</b> (Bill: {c_val:,.0f}) &nbsp;|&nbsp; Status: {status_badge}
                 </div>
                 """, unsafe_allow_html=True)
                 
             with cc2:
                 if row['status'] == 'Unpaid':
                     if st.button("Receive Bill 💵", key=f"rec_card_{row['id']}", use_container_width=True):
-                        # Auto calculations for extending target dates on recovery success
                         curr_exp = datetime.strptime(row['expiry_date'], "%Y-%m-%d").date()
                         extended_exp = curr_exp + timedelta(days=30) if curr_exp >= today_date else today_date + timedelta(days=30)
                         
                         supabase.table("billing_users").update({
-                            "status": "Paid", "last_paid_date": today_str, "collected_by": current_operator, "expiry_date": str(extended_exp)
+                            "status": "Paid", 
+                            "previous_balance": 0.0,
+                            "last_paid_date": today_str, 
+                            "collected_by": current_operator, 
+                            "expiry_date": str(extended_exp)
                         }).eq("id", row['id']).execute()
                         
                         supabase.table("billing_history").insert({
@@ -310,5 +309,3 @@ else:
     st.markdown('<div class="screenshot-section-title">📚 Business Annual Ledger Logs</div>', unsafe_allow_html=True)
     if not df_history.empty:
         st.dataframe(df_history[['name', 'area', 'amount', 'pay_date', 'collected_by', 'pay_month']], use_container_width=True)
-    else:
-        st.caption("Abhi tak koi transaction entry generated nahi hui.")
