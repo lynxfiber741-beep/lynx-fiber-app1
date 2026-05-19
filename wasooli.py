@@ -1,9 +1,8 @@
 import streamlit as st
-import sqlite3
 import pandas as pd
 
 # ====================================================================
-# 1. APPLICATION VIEWPORT & ROOT CONFIGURATION
+# 1. ROOT VIEWPORT CONFIGURATION
 # ====================================================================
 st.set_page_config(
     page_title="Lynx Fiber Pvt Ltd",
@@ -12,95 +11,19 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-DB_FILE = "wasoolee_core_pro.db"
-
-def get_db_connection():
-    conn = sqlite3.connect(DB_FILE)
-    conn.row_factory = sqlite3.Row
-    return conn
-
-# ====================================================================
-# 2. STATE CONFIGURATION & ROUTING ENGINE
-# ====================================================================
-# URL query parameter processing to lock view state across interaction triggers
-if "menu" not in st.query_params:
-    st.query_params["menu"] = "dashboard"
-current_menu = st.query_params["menu"]
-
-# ====================================================================
-# 3. HIGH-FIDELITY CSS RESET OVERRIDES
-# ====================================================================
+# --- MASTER LAYOUT & SIDEBAR STYLE CLEAN OVERRIDE ---
 st.markdown("""
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     
     <style>
-        /* Eradicate native Streamlit header margins and padding layout blocks */
+        /* Streamlit raw interface hide rules */
         [data-testid="stHeader"], footer, #MainMenu { display: none !important; visibility: hidden; }
         .block-container { padding: 0rem !important; max-width: 100% !important; margin: 0 !important; }
-        [data-testid="stAppViewContainer"] { padding: 0px !important; }
+        [data-testid="stAppViewContainer"] { padding: 0px !important; background-color: #f4f6f9; }
         
-        body {
-            background-color: #f4f6f9 !important;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
-        }
-        
-        /* Master Container Grid Structural Controls */
-        .app-shell {
-            display: flex;
-            height: 100vh;
-            width: 100vw;
-            overflow: hidden;
-        }
-        
-        /* Compact Vertical Left Icon Sidebar Layout */
-        .app-sidebar {
-            width: 70px;
-            background-color: #111625;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding-top: 20px;
-            z-index: 1000;
-            flex-shrink: 0;
-        }
-        .sidebar-brand-ico {
-            color: #00e5ff;
-            font-size: 24px;
-            margin-bottom: 35px;
-        }
-        .nav-node-link {
-            color: #64748b;
-            font-size: 20px;
-            margin-bottom: 25px;
-            width: 100%;
-            text-align: center;
-            padding: 10px 0;
-            display: block;
-            text-decoration: none;
-            transition: color 0.15s ease-in-out;
-        }
-        .nav-node-link:hover {
-            color: #00e5ff;
-        }
-        .nav-node-link.node-active {
-            color: #ffffff;
-            background-color: #1e293b;
-            border-left: 3px solid #00e5ff;
-        }
-        
-        /* Workspace Content Core Panel */
-        .app-workspace {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-            background-color: #f4f6f9;
-            overflow-y: auto;
-            height: 100vh;
-        }
-        
-        /* Top Navigation Strip Header Setup */
-        .top-navbar-strip {
+        /* Fixed Horizontal Blue Brand Ribbon */
+        .top-brand-ribbon {
             background-color: #0c7db1;
             color: #ffffff;
             padding: 12px 24px;
@@ -108,19 +31,35 @@ st.markdown("""
             justify-content: space-between;
             align-items: center;
             box-shadow: 0 2px 4px rgba(0,0,0,0.08);
-            flex-shrink: 0;
-        }
-        .navbar-brand-txt {
-            font-size: 16px;
-            font-weight: 600;
-            letter-spacing: 0.5px;
+            position: fixed;
+            top: 0; left: 70px; right: 0;
+            height: 50px;
+            z-index: 999;
         }
         
-        .workspace-view-body {
+        /* Left Fixed Icon Strip Container */
+        .left-icon-dock {
+            width: 70px;
+            background-color: #111625;
+            position: fixed;
+            top: 0; bottom: 0; left: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 15px;
+            z-index: 1000;
+        }
+        
+        /* Safe Workspace Rendering Area padding adjustment */
+        .workspace-core-body {
+            margin-left: 70px;
+            margin-top: 50px;
             padding: 24px;
+            background-color: #f4f6f9;
+            min-height: calc(100vh - 50px);
         }
-        
-        /* Performance Dashboard Counter Cards Layout */
+
+        /* Compact Financial Matrices Setup */
         .summary-card {
             background: #ffffff;
             border-radius: 6px;
@@ -130,79 +69,52 @@ st.markdown("""
         }
         .summary-card.green-tag { border-left-color: #10b981; }
         .summary-card.red-tag { border-left-color: #ef4444; }
-        
-        .card-meta-label {
-            color: #64748b;
-            font-size: 13px;
-            font-weight: 500;
-            text-transform: uppercase;
-        }
-        .card-meta-val {
-            font-size: 28px;
-            font-weight: 700;
-            color: #1e293b;
-            margin-top: 4px;
-        }
-        
-        /* Quick System Action Navigation Nodes Buttons */
-        .panel-shortcut-btn {
-            background-color: #ffffff;
-            color: #334155;
-            border: 1px solid #e2e8f0;
-            padding: 10px 16px;
-            font-size: 13px;
-            font-weight: 500;
-            border-radius: 4px;
-            text-decoration: none;
-            display: block;
-            text-align: center;
-            transition: all 0.15s ease;
-        }
-        .panel-shortcut-btn:hover {
-            background-color: #f8fafc;
-            border-color: #cbd5e1;
-            color: #0c7db1;
-        }
+        .card-meta-label { color: #64748b; font-size: 13px; font-weight: 500; text-transform: uppercase; }
+        .card-meta-val { font-size: 28px; font-weight: 700; color: #1e293b; margin-top: 4px; }
     </style>
 """, unsafe_allow_html=True)
 
 # ====================================================================
-# 4. DATA ENGINE AGGREGATIONS
+# 2. STATE PERSISTENCE ENGINE (ROUTING CONTROLLER)
 # ====================================================================
-# Core operational dashboard data constants matching verification screen targets
-active_users_val = 1245
-total_recovered_val = 1193440
-outstanding_ledger_val = 588300
+if "active_panel" not in st.session_state:
+    st.session_state.active_panel = "dashboard"
 
 # ====================================================================
-# 5. LAYOUT BASE SHELL RENDERING
+# 3. INTERFACE BRAND RIBBON & SIDEBAR GENERATION
 # ====================================================================
-# Building clean navigation tags using target parameter switching structures
-sidebar_markup = f"""
-<div class="app-shell">
-    <div class="app-sidebar">
-        <div class="sidebar-brand-ico"><i class="bi bi-globe"></i></div>
-        <a href="?menu=dashboard" target="_self" class="nav-node-link {'node-active' if current_menu == 'dashboard' else ''}" title="Dashboard Overview"><i class="bi bi-speedometer2"></i></a>
-        <a href="?menu=users" target="_self" class="nav-node-link {'node-active' if current_menu == 'users' else ''}" title="Users Matrix"><i class="bi bi-people"></i></a>
-        <a href="?menu=network" target="_self" class="nav-node-link {'node-active' if current_menu == 'network' else ''}" title="Network Areas"><i class="bi bi-geo-alt"></i></a>
-        <a href="?menu=ledger" target="_self" class="nav-node-link {'node-active' if current_menu == 'ledger' else ''}" title="Transactions Ledger"><i class="bi bi-receipt"></i></a>
-        <a href="?menu=accounts" target="_self" class="nav-node-link {'node-active' if current_menu == 'accounts' else ''}" title="Accounts Recovery"><i class="bi bi-wallet2"></i></a>
+# Horizontal Ribbon Content Layout
+st.markdown("""
+    <div class="top-brand-ribbon">
+        <div style="font-size:16px; font-weight:600; letter-spacing:0.5px;">🌐 LYNX FIBER PVT LTD</div>
+        <div style="font-size:13px; font-weight:500;"><i class="bi bi-person-circle"></i> Profile: ISP_OWNER</div>
     </div>
+""", unsafe_allow_html=True)
+
+# Sidebar Native Interactive Buttons Layer Structure
+with st.container():
+    st.markdown('<div class="left-icon-dock">', unsafe_allow_html=True)
+    st.markdown('<div style="color:#00e5ff; font-size:24px; margin-bottom:30px;"><i class="bi bi-globe"></i></div>', unsafe_allow_html=True)
     
-    <div class="app-workspace">
-        <div class="top-navbar-strip">
-            <div class="navbar-brand-txt">🌐 LYNX FIBER PVT LTD</div>
-            <div style="font-size: 13px; font-weight: 500;"><i class="bi bi-person-circle"></i> Profile: ISP_OWNER</div>
-        </div>
-        <div class="workspace-view-body">
-"""
-st.markdown(sidebar_markup, unsafe_allow_html=True)
+    # Interactive Native Streamlit Buttons Styled Invisibly onto Dock
+    if st.button("📊", key="btn_dash", help="Dashboard View", use_container_width=True):
+        st.session_state.active_panel = "dashboard"
+    if st.button("👥", key="btn_users", help="Subscriber Base Profiles", use_container_width=True):
+        st.session_state.active_panel = "users"
+    if st.button("📍", key="btn_network", help="Network Node Sectors", use_container_width=True):
+        st.session_state.active_panel = "network"
+    if st.button("📈", key="btn_ledger", help="Ledger Ledger System", use_container_width=True):
+        st.session_state.active_panel = "ledger"
+        
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # ====================================================================
-# 6. ROUTED CONTROLLER WORKING PANELS
+# 4. WORKSPACE DATA DISPLAY DISPATCHER
 # ====================================================================
-if current_menu == "dashboard":
-    # Workspace Identity Header Title
+st.markdown('<div class="workspace-core-body">', unsafe_allow_html=True)
+
+if st.session_state.active_panel == "dashboard":
+    # Screen Welcome Banner Header
     st.markdown("""
         <div class="mb-4">
             <h4 class="mb-1" style="color:#1e293b; font-weight:700;">HELLO!! LYNX FIBER INTERNET</h4>
@@ -210,43 +122,27 @@ if current_menu == "dashboard":
         </div>
     """, unsafe_allow_html=True)
     
-    # Action Navigation Shortcut Elements Row Block (Using standard tags to prevent target refresh breaks)
-    st.markdown("""
-        <div class="row g-2 mb-4">
-            <div class="col-md-3"><a href="?menu=users" target="_self" class="panel-shortcut-btn"><i class="bi bi-download"></i> User/Dealer Application</a></div>
-            <div class="col-md-3"><a href="?menu=network" target="_self" class="panel-shortcut-btn"><i class="bi bi-hdd-network"></i> BT Drivers Download</a></div>
-            <div class="col-md-3"><a href="?menu=ledger" target="_self" class="panel-shortcut-btn"><i class="bi bi-link-45deg"></i> Copy Query Link</a></div>
-            <div class="col-md-3"><a href="?menu=accounts" target="_self" class="panel-shortcut-btn"><i class="bi bi-file-earmark-text"></i> Download Monthly Bill</a></div>
-        </div>
-        <h6 class="mb-3" style="color:#475569; font-weight:600;">📊 Financial Counter Summary</h6>
-    """, unsafe_allow_html=True)
+    # Operation Commands Rows
+    c1, c2, c3, c4 = st.columns(4)
+    c1.button("📥 User/Dealer Application", key="app_dl", use_container_width=True)
+    c2.button("💾 BT Drivers Download", key="bt_dl", use_container_width=True)
+    c3.button("🔗 Copy Query Link", key="cp_lnk", use_container_width=True)
+    c4.button("🧾 Download Monthly Bill", key="dw_bl", use_container_width=True)
     
-    # Structural Dashboard Layout Grid Counter Matrices
-    st.markdown(f"""
-        <div class="row g-3 mb-4">
-            <div class="col-md-4">
-                <div class="summary-card">
-                    <div class="card-meta-label">👤 Active Users</div>
-                    <div class="card-meta-val">{active_users_val:,}</div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="summary-card green-tag">
-                    <div class="card-meta-label">💵 Total Recovered</div>
-                    <div class="card-meta-val">PKR {total_recovered_val:,.0f}</div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="summary-card red-tag">
-                    <div class="card-meta-label">⚠️ Outstanding Ledger</div>
-                    <div class="card-meta-val">PKR {outstanding_ledger_val:,.0f}</div>
-                </div>
-            </div>
-        </div>
-        <hr style="border-color:#cbd5e1;" class="my-4">
-    """, unsafe_allow_html=True)
+    st.markdown("<br><h6 class='mb-3' style='color:#475569; font-weight:600;'>📊 Financial Counter Summary</h6>", unsafe_allow_html=True)
     
-    # Analytical Graphical Charts Visual Blocks
+    # Matching Screen Core Financial KPI Indicators Grid Box Row
+    card_r1, card_r2, card_r3 = st.columns(3)
+    with card_r1:
+        st.markdown('<div class="summary-card"><div class="card-meta-label">👤 Active Users</div><div class="card-meta-val">1,245</div></div>', unsafe_allow_html=True)
+    with card_r2:
+        st.markdown('<div class="summary-card green-tag"><div class="card-meta-label">💵 Total Recovered</div><div class="card-meta-val">PKR 1,193,440</div></div>', unsafe_allow_html=True)
+    with card_r3:
+        st.markdown('<div class="summary-card red-tag"><div class="card-meta-label">⚠️ Outstanding Ledger</div><div class="card-meta-val">PKR 588,300</div></div>', unsafe_allow_html=True)
+        
+    st.markdown("<hr style='border-color:#cbd5e1;' class='my-4'>", unsafe_allow_html=True)
+    
+    # Charts Structural Data Blocks
     g1, g2 = st.columns(2)
     with g1:
         st.markdown("<span style='color:#475569; font-weight:600; font-size:14px; display:block; margin-bottom:10px;'>📊 Last 6 Month Receiving</span>", unsafe_allow_html=True)
@@ -264,24 +160,18 @@ if current_menu == "dashboard":
         })
         st.bar_chart(chart_data_2.set_index("Package"), y="Total Users", color="#10b981", use_container_width=True)
 
-elif current_menu == "users":
-    st.markdown("<h4 style='color: #0c7db1; font-weight:700;'>👤 Subscriber Entry Form</h4><p class='text-muted' style='font-size:13px;'>Create and append new subscriber connection records to the core database node.</p>", unsafe_allow_html=True)
-    
-    # Standard streamlined user record generation forms
-    with st.form("sub_form"):
+elif st.session_state.active_panel == "users":
+    st.markdown("<h4 style='color:#0c7db1; font-weight:700;'>👤 Subscriber Profile Core Directory</h4><br>", unsafe_allow_html=True)
+    with st.form("sub_entry_form"):
         r1, r2 = st.columns(2)
-        u_id = r1.text_input("Internet User ID / Account Code")
-        u_name = r1.text_input("Subscriber Profile Full Name")
-        u_phone = r2.text_input("Active Mobile Connection String")
-        u_type = r2.selectbox("Connection Profile Service Mapping", ["Internet", "Cable", "Both"])
-        
-        if st.form_submit_button("⚡ Append Record to Core"):
-            if u_id and u_name:
-                st.success(f"Success: Account mapped cleanly for {u_name}")
+        r1.text_input("Internet User ID / Custom Account ID")
+        r1.text_input("Subscriber Profile Name")
+        r2.text_input("Active Mobile Connection")
+        r2.selectbox("Connection Profile Type", ["Internet", "Cable", "Both"])
+        st.form_submit_button("⚡ Append Record to Core")
 
 else:
-    st.markdown(f"<h4 style='color: #0c7db1; font-weight:700;'>⚙️ System Section Module Active</h4>", unsafe_allow_html=True)
-    st.info(f"Dynamic view initialized for option parameter: '{current_menu.upper()}'. Core relational interface active.")
+    st.markdown(f"<h4 style='color:#0c7db1;'>⚙️ Operational Control Module Active</h4>", unsafe_allow_html=True)
+    st.info(f"System profile section mapped securely. Relational infrastructure active.")
 
-# Closing out raw layout HTML wrap matrices
-st.markdown('</div></div></div>', unsafe_allow_html=True)
+st.markdown('</div>', unsafe_allow_html=True)
