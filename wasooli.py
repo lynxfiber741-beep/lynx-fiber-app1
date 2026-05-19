@@ -564,3 +564,79 @@ if user_data["role"] == "isp_owner":
                     if update_invoice_payment(selected_inv_id, cash_received, collector_id=None):
                         st.success(f"Payment updated successfully for Invoice #{selected_inv_id}!")
                         st.rerun()
+                        # ====================================================================
+# STEP 5: INTERACTIVE ANALYTICAL DASHBOARD (FINANCIAL GRAPHS & METRICS)
+# ====================================================================
+
+# Yeh section aapke 'if user_data["role"] == "isp_owner":' block ke andar sub se top par real-time counters aur visual charts add karega.
+# Isko aap tabs se upar lagayenge taaki pure control panel ka overview hamesha screen par dikhta rahe.
+
+st.markdown("---")
+st.markdown("<h3 style='color: #00f0ff;'>⚡ Real-Time Network & Financial Analytics</h3>", unsafe_allow_html=True)
+
+conn = get_db_connection()
+
+# 1. COMPUTE CORE METRICS LIVE FROM LEDGERS
+cursor = conn.cursor()
+cursor.execute("SELECT COUNT(*) FROM subscribers WHERE company_id=? AND status='Active'", (current_company,))
+total_active_subs = cursor.fetchone()[0]
+
+cursor.execute("SELECT SUM(total_payable), SUM(amount_paid) FROM invoices_ledger WHERE company_id=?", (current_company,))
+financial_row = cursor.fetchone()
+total_receivable = float(financial_row[0]) if financial_row and financial_row[0] else 0.0
+total_recovered = float(financial_row[1]) if financial_row and financial_row[1] else 0.0
+total_outstanding = total_receivable - total_recovered
+
+conn.close()
+
+# --- METRIC CARDS ROW DISPLAY ---
+m_col1, m_col2, m_col3 = st.columns(3)
+with m_col1:
+    st.metric(label="👥 Active Subscribers Node", value=f"{total_active_subs} Users")
+with m_col2:
+    st.metric(label="📈 Total Cash Recovered", value=f"PKR {total_recovered:,.2f}", delta=f"Active Node")
+with m_col3:
+    st.metric(label="⚠️ Outstanding Balance Ledger", value=f"PKR {total_outstanding:,.2f}", delta="- Remaining", delta_color="inverse")
+
+st.write("---")
+
+# --- GRAPH LAYOUT MATRIX ---
+g_col1, g_col2 = st.columns(2)
+
+with g_col1:
+    st.markdown("##### 📊 Monthly Recovery Timeline (Last 6 Months)")
+    # Pull monthly transactional trends from system history
+    conn = get_db_connection()
+    monthly_data_df = pd.read_sql_query("""
+        SELECT billing_month as [Month], SUM(amount_paid) as [Recovered Amount]
+        FROM invoices_ledger
+        WHERE company_id = ?
+        GROUP BY billing_month
+    """, conn, params=(current_company,))
+    conn.close()
+    
+    if not monthly_data_df.empty:
+        # Render a clean, reactive bar chart matching old metrics
+        st.bar_chart(data=monthly_data_df.set_index("Month"), y="Recovered Amount", color="#00f0ff", use_container_width=True)
+    else:
+        st.info("Analytics engine waiting for monthly invoices to structure graph visualizations.")
+
+with g_col2:
+    st.markdown("##### 🎯 Service Package Distribution Matrix")
+    # Pull active packages categorization profiles
+    conn = get_db_connection()
+    package_data_df = pd.read_sql_query("""
+        SELECT package_internet as [Package Profile], COUNT(*) as [Total Users]
+        FROM subscribers
+        WHERE company_id = ? AND status='Active' AND package_internet IS NOT NULL AND package_internet != ''
+        GROUP BY package_internet
+    """, conn, params=(current_company,))
+    conn.close()
+    
+    if not package_data_df.empty:
+        # Render a dynamic horizontal or vertical column array
+        st.bar_chart(data=package_data_df.set_index("Package Profile"), y="Total Users", color="#22c55e", use_container_width=True)
+    else:
+        st.info("Add user profiles with explicit package plans to map data matrices.")
+        
+st.markdown("---")
