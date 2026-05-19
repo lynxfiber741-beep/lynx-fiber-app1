@@ -1,4 +1,4 @@
-
+Python
 import streamlit as st
 import pandas as pd
 from datetime import datetime
@@ -7,7 +7,7 @@ import bcrypt
 import re
 
 # =========================================================
-# ⚡ LYNX FIBER ADVANCED ISP CRM SYSTEM (SECURE VERSION)
+# ⚡ LYNX FIBER ADVANCED ISP CRM SYSTEM
 # =========================================================
 
 st.set_page_config(
@@ -17,7 +17,7 @@ st.set_page_config(
 )
 
 # =========================================================
-# 🎨 PREMIUM UI ENGINE
+# 🎨 PREMIUM CSS UI
 # =========================================================
 
 st.markdown("""
@@ -35,8 +35,8 @@ st.markdown("""
 }
 
 .wasooli-header {
-    background-color: #0284c7 !important;
-    color: white !important;
+    background-color: #0284c7;
+    color: white;
     padding: 15px 40px;
     display: flex;
     justify-content: space-between;
@@ -44,11 +44,8 @@ st.markdown("""
     width: 100vw;
     position: relative;
     left: 50%;
-    right: 50%;
     margin-left: -50vw;
-    margin-right: -50vw;
     font-family: Arial, sans-serif;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     border-bottom: 3px solid #0369a1;
 }
 
@@ -64,27 +61,6 @@ st.markdown("""
     border-radius: 4px;
     font-weight: bold;
     font-size: 13px;
-}
-
-.action-row {
-    display: flex;
-    gap: 12px;
-    margin-top: 20px;
-    margin-bottom: 25px;
-    flex-wrap: wrap;
-}
-
-.action-card-btn {
-    background: linear-gradient(135deg, #0284c7, #0369a1);
-    color: white;
-    border: none;
-    padding: 12px 24px;
-    border-radius: 4px;
-    font-size: 14px;
-    font-weight: bold;
-    text-align: center;
-    flex: 1;
-    min-width: 180px;
 }
 
 .metric-box-container {
@@ -115,16 +91,6 @@ st.markdown("""
     margin-top: 5px;
 }
 
-.table-section-heading {
-    color: #0284c7 !important;
-    font-size: 20px;
-    font-weight: bold;
-    margin-top: 20px;
-    margin-bottom: 15px;
-    border-bottom: 2px solid #e2e8f0;
-    padding-bottom: 5px;
-}
-
 </style>
 """, unsafe_allow_html=True)
 
@@ -143,7 +109,7 @@ def init_supabase():
 supabase: Client = init_supabase()
 
 # =========================================================
-# 📅 GLOBAL VARIABLES
+# 📅 DATE VARIABLES
 # =========================================================
 
 current_month = datetime.now().strftime("%B")
@@ -151,10 +117,10 @@ current_year = datetime.now().strftime("%Y")
 today_date = datetime.now().strftime("%Y-%m-%d")
 
 # =========================================================
-# 🔐 SESSION ENGINE
+# 🔒 SESSION MANAGEMENT
 # =========================================================
 
-default_sessions = {
+defaults = {
     "logged_in": False,
     "user_role": None,
     "isp_id": None,
@@ -163,12 +129,12 @@ default_sessions = {
     "branding_mode": "Lynx Branding"
 }
 
-for key, value in default_sessions.items():
+for key, value in defaults.items():
     if key not in st.session_state:
         st.session_state[key] = value
 
 # =========================================================
-# 🔒 SECURITY FUNCTIONS
+# 🔐 SECURITY FUNCTIONS
 # =========================================================
 
 def hash_password(password):
@@ -177,19 +143,17 @@ def hash_password(password):
         bcrypt.gensalt()
     ).decode()
 
-def verify_password(input_password, hashed_password):
+def verify_password(password, hashed):
     return bcrypt.checkpw(
-        input_password.encode(),
-        hashed_password.encode()
+        password.encode(),
+        hashed.encode()
     )
 
 def validate_phone(phone):
-    pattern = r'^[0-9]{11}$'
-    return re.match(pattern, phone)
+    return re.match(r'^[0-9]{11}$', phone)
 
-def secure_logout():
-    keys = list(st.session_state.keys())
-    for key in keys:
+def logout():
+    for key in list(st.session_state.keys()):
         del st.session_state[key]
 
     st.rerun()
@@ -200,22 +164,22 @@ def secure_logout():
 
 if st.session_state["logged_in"]:
 
-    display_title = (
+    title = (
         st.session_state["isp_name"].upper()
         if st.session_state["branding_mode"] == "Own Branding"
         else "LYNX FIBER INTERNET"
     )
 
-    role_text = f"👤 {st.session_state['operator_name']} ({st.session_state['user_role']})"
+    role = f"{st.session_state['operator_name']} ({st.session_state['user_role']})"
 
     st.markdown(f"""
     <div class="wasooli-header">
         <div class="wasooli-brand">
-            🌐 HELLO!! {display_title}
+            ⚡ {title}
         </div>
 
         <div class="wasooli-role-badge">
-            {role_text}
+            👤 {role}
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -225,28 +189,28 @@ else:
     st.markdown("""
     <div class="wasooli-header">
         <div class="wasooli-brand">
-            ⚡ LYNX FIBER ADVANCED SYSTEM
+            ⚡ LYNX FIBER SYSTEM
         </div>
 
         <div class="wasooli-role-badge">
-            🔒 ACCESS SECURED
+            🔒 SECURED ACCESS
         </div>
     </div>
     """, unsafe_allow_html=True)
 
 # =========================================================
-# 🔐 AUTHENTICATION
+# 🔐 LOGIN / REGISTER
 # =========================================================
 
 if not st.session_state["logged_in"]:
 
-    _, col_center, _ = st.columns([1, 1.8, 1])
+    _, center, _ = st.columns([1, 1.6, 1])
 
-    with col_center:
+    with center:
 
         st.markdown("<br><br>", unsafe_allow_html=True)
 
-        tab_staff, tab_admin, tab_register = st.tabs([
+        tab1, tab2, tab3 = st.tabs([
             "📲 Staff Login",
             "🔒 Admin Login",
             "📝 Register ISP"
@@ -256,14 +220,16 @@ if not st.session_state["logged_in"]:
         # 👨‍🔧 STAFF LOGIN
         # =================================================
 
-        with tab_staff:
+        with tab1:
 
-            with st.form("staff_login_form"):
+            with st.form("staff_login"):
 
-                s_user = st.text_input("Staff Username")
+                s_user = st.text_input("Username")
                 s_pass = st.text_input("Password", type="password")
 
-                if st.form_submit_button("Login Staff"):
+                submit = st.form_submit_button("Login")
+
+                if submit:
 
                     try:
 
@@ -272,45 +238,47 @@ if not st.session_state["logged_in"]:
                             .eq("username", s_user) \
                             .execute()
 
-                        if len(res.data) > 0:
+                        if len(res.data) == 0:
+                            st.error("❌ User not found")
 
-                            user_data = res.data[0]
+                        else:
+
+                            user = res.data[0]
 
                             if verify_password(
                                 s_pass,
-                                user_data["password"]
+                                user["password"]
                             ):
 
                                 st.session_state["logged_in"] = True
                                 st.session_state["user_role"] = "Staff"
-                                st.session_state["isp_id"] = user_data["isp_id"]
-                                st.session_state["operator_name"] = user_data["staff_name"]
-                                st.session_state["isp_name"] = user_data["isp_companies"]["company_name"]
-                                st.session_state["branding_mode"] = user_data["isp_companies"]["branding_mode"]
+                                st.session_state["isp_id"] = user["isp_id"]
+                                st.session_state["operator_name"] = user["staff_name"]
+                                st.session_state["isp_name"] = user["isp_companies"]["company_name"]
+                                st.session_state["branding_mode"] = user["isp_companies"]["branding_mode"]
 
                                 st.rerun()
 
                             else:
                                 st.error("❌ Invalid password")
 
-                        else:
-                            st.error("❌ User not found")
-
                     except Exception as e:
-                        st.error(f"Database Error: {e}")
+                        st.error(f"Error: {e}")
 
         # =================================================
         # 👑 ADMIN LOGIN
         # =================================================
 
-        with tab_admin:
+        with tab2:
 
-            with st.form("admin_login_form"):
+            with st.form("admin_login"):
 
                 a_user = st.text_input("Admin Username")
                 a_pass = st.text_input("Admin Password", type="password")
 
-                if st.form_submit_button("Login Admin"):
+                submit = st.form_submit_button("Login")
+
+                if submit:
 
                     try:
 
@@ -319,42 +287,40 @@ if not st.session_state["logged_in"]:
                             .eq("username", a_user) \
                             .execute()
 
-                        if len(res.data) > 0:
+                        if len(res.data) == 0:
+                            st.error("❌ Admin not found")
 
-                            admin_data = res.data[0]
+                        else:
+
+                            admin = res.data[0]
 
                             if verify_password(
                                 a_pass,
-                                admin_data["password"]
+                                admin["password"]
                             ):
 
                                 st.session_state["logged_in"] = True
                                 st.session_state["user_role"] = "Admin"
-                                st.session_state["isp_id"] = admin_data["id"]
+                                st.session_state["isp_id"] = admin["id"]
                                 st.session_state["operator_name"] = "Admin"
-                                st.session_state["isp_name"] = admin_data["company_name"]
-                                st.session_state["branding_mode"] = admin_data["branding_mode"]
+                                st.session_state["isp_name"] = admin["company_name"]
+                                st.session_state["branding_mode"] = admin["branding_mode"]
 
                                 st.rerun()
 
                             else:
                                 st.error("❌ Invalid password")
 
-                        else:
-                            st.error("❌ Admin not found")
-
                     except Exception as e:
-                        st.error(f"Database Error: {e}")
+                        st.error(f"Error: {e}")
 
         # =================================================
-        # 📝 ISP REGISTRATION
+        # 📝 REGISTER ISP
         # =================================================
 
-        with tab_register:
+        with tab3:
 
-            st.info("📞 Support: 0331-5336673")
-
-            with st.form("signup_form"):
+            with st.form("register_isp"):
 
                 r_company = st.text_input("Company Name")
                 r_user = st.text_input("Admin Username")
@@ -371,7 +337,9 @@ if not st.session_state["logged_in"]:
                     type="password"
                 )
 
-                if st.form_submit_button("Register ISP"):
+                submit = st.form_submit_button("Register ISP")
+
+                if submit:
 
                     if not all([
                         r_company,
@@ -392,27 +360,29 @@ if not st.session_state["logged_in"]:
 
                         try:
 
-                            check_user = supabase.table("isp_companies") \
+                            check = supabase.table("isp_companies") \
                                 .select("id") \
                                 .eq("username", r_user) \
                                 .execute()
 
-                            if len(check_user.data) > 0:
-                                st.error("❌ Username already taken")
+                            if len(check.data) > 0:
+                                st.error("❌ Username already exists")
 
                             else:
 
-                                secure_password = hash_password(r_pass)
+                                secure_pass = hash_password(r_pass)
 
                                 supabase.table("isp_companies").insert({
+
                                     "company_name": r_company,
                                     "username": r_user,
-                                    "password": secure_password,
+                                    "password": secure_pass,
                                     "phone": r_phone,
                                     "branding_mode": r_brand
+
                                 }).execute()
 
-                                st.success("🎉 ISP Registered Successfully")
+                                st.success("✅ ISP Registered Successfully")
 
                         except Exception as e:
                             st.error(f"Registration Error: {e}")
@@ -425,97 +395,56 @@ else:
 
     my_isp_id = st.session_state["isp_id"]
     is_admin = st.session_state["user_role"] == "Admin"
-    current_operator = st.session_state["operator_name"]
-
-    # =====================================================
-    # 🎛️ TOP ACTION BUTTONS
-    # =====================================================
-
-    st.markdown("""
-    <div class="action-row">
-
-        <div class="action-card-btn">
-            User Registration
-        </div>
-
-        <div class="action-card-btn">
-            Download Bills
-        </div>
-
-        <div class="action-card-btn">
-            WhatsApp Notices
-        </div>
-
-        <div class="action-card-btn">
-            Payment Receipts
-        </div>
-
-    </div>
-    """, unsafe_allow_html=True)
-
-    # =====================================================
-    # 📌 SIDEBAR
-    # =====================================================
 
     st.sidebar.markdown(
         f"### Logged in as: `{st.session_state['user_role']}`"
     )
 
-    if st.sidebar.button(
-        "🔒 Logout",
-        use_container_width=True
-    ):
-        secure_logout()
+    if st.sidebar.button("🔒 Logout"):
+        logout()
 
     # =====================================================
     # ➕ ADD CUSTOMER
     # =====================================================
 
-    with st.sidebar.expander(
-        "➕ Add Customer",
-        expanded=True
-    ):
+    with st.sidebar.expander("➕ Add Customer", expanded=True):
 
-        with st.form(
-            "add_customer_form",
-            clear_on_submit=True
-        ):
+        with st.form("add_customer"):
 
-            n_name = st.text_input("Customer Name")
-            n_user = st.text_input("PPPoE Username")
-            n_phone = st.text_input("Phone")
-            n_area = st.text_input("Area")
+            c_name = st.text_input("Customer Name")
+            c_user = st.text_input("PPPoE Username")
+            c_phone = st.text_input("Phone Number")
+            c_area = st.text_input("Area")
 
-            n_prev = st.number_input(
+            c_prev = st.number_input(
                 "Previous Balance",
                 min_value=0,
                 step=100
             )
 
-            n_bill = st.number_input(
+            c_bill = st.number_input(
                 "Monthly Bill",
                 min_value=0,
                 step=100
             )
 
-            if st.form_submit_button(
-                "Save Customer",
-                use_container_width=True
-            ):
+            submit = st.form_submit_button("Save Customer")
+
+            if submit:
 
                 if not all([
-                    n_name,
-                    n_user,
-                    n_phone,
-                    n_area
+                    c_name,
+                    c_user,
+                    c_phone,
+                    c_area
                 ]):
                     st.error("❌ Fill all fields")
 
-                elif not validate_phone(n_phone):
+                elif not validate_phone(c_phone):
                     st.error("❌ Invalid phone number")
 
-                elif n_bill <= 0:
-                    st.error("❌ Invalid bill amount")
+                elif c_bill <= 0:
+                    st.error("❌ Invalid bill")
 
                 else:
 
@@ -524,18 +453,17 @@ else:
                         supabase.table("billing_users").insert({
 
                             "isp_id": my_isp_id,
-                            "name": n_name,
-                            "username": n_user,
-                            "phone": n_phone,
-                            "area": n_area,
-                            "previous_balance": n_prev,
-                            "current_bill": n_bill,
+                            "name": c_name,
+                            "username": c_user,
+                            "phone": c_phone,
+                            "area": c_area,
+                            "previous_balance": c_prev,
+                            "current_bill": c_bill,
                             "status": "Unpaid"
 
                         }).execute()
 
                         st.success("✅ Customer Added")
-
                         st.rerun()
 
                     except Exception as e:
@@ -549,18 +477,15 @@ else:
 
         with st.sidebar.expander("👥 Create Staff"):
 
-            with st.form(
-                "create_staff_form",
-                clear_on_submit=True
-            ):
+            with st.form("create_staff"):
 
                 st_name = st.text_input("Staff Name")
                 st_user = st.text_input("Username")
                 st_pass = st.text_input("Password")
 
-                if st.form_submit_button(
-                    "Create Staff"
-                ):
+                submit = st.form_submit_button("Create Staff")
+
+                if submit:
 
                     if not all([
                         st_name,
@@ -573,25 +498,24 @@ else:
 
                         try:
 
-                            check_staff = supabase.table("isp_staff") \
+                            check = supabase.table("isp_staff") \
                                 .select("id") \
                                 .eq("username", st_user) \
                                 .execute()
 
-                            if len(check_staff.data) > 0:
-
-                                st.error("❌ Username exists")
+                            if len(check.data) > 0:
+                                st.error("❌ Username already exists")
 
                             else:
 
-                                secure_password = hash_password(st_pass)
+                                secure_pass = hash_password(st_pass)
 
                                 supabase.table("isp_staff").insert({
 
                                     "isp_id": my_isp_id,
                                     "staff_name": st_name,
                                     "username": st_user,
-                                    "password": secure_password
+                                    "password": secure_pass
 
                                 }).execute()
 
@@ -601,28 +525,28 @@ else:
                             st.error(f"Error: {e}")
 
     # =====================================================
-    # 📊 FETCH DATA
+    # 📊 LOAD DATA
     # =====================================================
 
     try:
 
-        users_resp = supabase.table("billing_users") \
+        users = supabase.table("billing_users") \
             .select("*") \
             .eq("isp_id", my_isp_id) \
             .order("name") \
             .execute()
 
-        history_resp = supabase.table("billing_history") \
+        history = supabase.table("billing_history") \
             .select("*") \
             .eq("isp_id", my_isp_id) \
             .execute()
 
-        df_users = pd.DataFrame(users_resp.data)
-        df_history = pd.DataFrame(history_resp.data)
+        df_users = pd.DataFrame(users.data)
+        df_history = pd.DataFrame(history.data)
 
     except Exception as e:
 
-        st.error(f"Database Fetch Error: {e}")
+        st.error(f"Database Error: {e}")
         st.stop()
 
     # =====================================================
@@ -652,22 +576,21 @@ else:
 
         if df_users.empty:
 
-            st.info("No customers added yet.")
+            st.info("No customers added.")
 
         else:
 
-            total_users = len(df_users)
+            total = len(df_users)
 
-            paid_users = len(
+            paid = len(
                 df_users[df_users["status"] == "Paid"]
             )
 
-            unpaid_users = len(
+            unpaid = len(
                 df_users[df_users["status"] == "Unpaid"]
             )
 
             st.markdown(f"""
-
             <div class="metric-box-container">
 
                 <div class="metric-box">
@@ -676,7 +599,7 @@ else:
                     </div>
 
                     <div class="metric-box-value">
-                        {total_users}
+                        {total}
                     </div>
                 </div>
 
@@ -686,7 +609,7 @@ else:
                     </div>
 
                     <div class="metric-box-value" style="color:green;">
-                        {paid_users}
+                        {paid}
                     </div>
                 </div>
 
@@ -696,15 +619,12 @@ else:
                     </div>
 
                     <div class="metric-box-value" style="color:red;">
-                        {unpaid_users}
+                        {unpaid}
                     </div>
                 </div>
 
             </div>
-
             """, unsafe_allow_html=True)
-
-            # SEARCH
 
             search = st.text_input("🔍 Search Customer")
 
@@ -722,7 +642,7 @@ else:
             )
 
     # =====================================================
-    # 📍 AREA TAB
+    # 📍 AREA ANALYTICS
     # =====================================================
 
     with tab2:
@@ -733,16 +653,16 @@ else:
                 df_users["area"].unique()
             )
 
-            selected_area = st.selectbox(
+            selected = st.selectbox(
                 "Select Area",
                 areas
             )
 
-            if selected_area == "All":
+            if selected == "All":
                 filtered = df_users
             else:
                 filtered = df_users[
-                    df_users["area"] == selected_area
+                    df_users["area"] == selected
                 ]
 
             st.dataframe(
@@ -751,7 +671,7 @@ else:
             )
 
     # =====================================================
-    # 📚 HISTORY TAB
+    # 📚 PAYMENT HISTORY
     # =====================================================
 
     if is_admin:
@@ -759,8 +679,7 @@ else:
         with tab3:
 
             if df_history.empty:
-
-                st.info("No payment history.")
+                st.info("No payment history")
 
             else:
 
