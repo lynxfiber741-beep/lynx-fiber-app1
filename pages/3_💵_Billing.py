@@ -5,7 +5,7 @@ from sqlalchemy import create_engine, Column, Integer, String, Numeric, Date, Fo
 from sqlalchemy.orm import declarative_base, sessionmaker
 import enum
 
-# ✅ Wide Screen Settings Top Par
+# ✅ CRITICAL FIX: Sabse upar page layout configuration bina kisi error ke
 st.set_page_config(page_title="Lynx Fiber Billing", layout="wide")
 
 DATABASE_URL = "postgresql://postgres.snbmurjcggthdvxyxyrd:DlLaglY98SkOzDq2@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres"
@@ -66,7 +66,7 @@ class Payment(Base):
     payment_date = Column(Date)
     payment_method = Column(Enum(PaymentMethod))
 
-# 🔑 LICENSE CHECK FOR PAGE ACCESS
+# 🔑 LOCK CHECK BEFORE LOADING THE REST OF THE PAGE
 db = SessionLocal()
 lic = db.query(TenantLicense).filter(TenantLicense.license_key == "LNX-PREMIUM-2026").first()
 if not lic or not lic.is_active or lic.expiry_date < datetime.utcnow().date():

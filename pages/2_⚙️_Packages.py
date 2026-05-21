@@ -3,7 +3,7 @@ from datetime import datetime
 from sqlalchemy import create_engine, Column, Integer, String, Numeric, ForeignKey, Date, Boolean
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-# ✅ Wide Screen Settings Top Par
+# ✅ CRITICAL FIX: Sabse upar page layout configuration bina kisi error ke
 st.set_page_config(page_title="Lynx Network Settings", layout="wide")
 
 DATABASE_URL = "postgresql://postgres.snbmurjcggthdvxyxyrd:DlLaglY98SkOzDq2@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres"
@@ -43,7 +43,7 @@ class SubArea(Base):
     area_id = Column(Integer, ForeignKey('areas.id'))
     name = Column(String)
 
-# 🔑 LICENSE CHECK FOR PAGE ACCESS
+# 🔑 LOCK CHECK BEFORE LOADING THE REST OF THE PAGE
 db = SessionLocal()
 lic = db.query(TenantLicense).filter(TenantLicense.license_key == "LNX-PREMIUM-2026").first()
 if not lic or not lic.is_active or lic.expiry_date < datetime.utcnow().date():
