@@ -4,7 +4,7 @@ from datetime import datetime, date
 from sqlalchemy import create_engine, Column, Integer, String, Date, Boolean, Enum
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-# ✅ Wide Screen Settings (Error se bachne ke liye sabse upar)
+# ✅ Wide Screen Layout Settings
 st.set_page_config(page_title="Lynx Fiber App Portal", layout="wide")
 
 # LIVE SUPABASE CONNECTION
@@ -63,7 +63,7 @@ if not is_licensed:
             <p style="font-weight:bold; color:#111827; font-size:20px;">Kindly contact software owner (Umer Wazir) for renewal dues.</p>
         </div>
     """, unsafe_allow_html=True)
-    st.stop() # Code blocks here
+    st.stop()
 
 # ==============================================================================
 # VISUAL FRONTEND (LYNX DASHBOARD)
