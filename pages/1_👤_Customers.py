@@ -5,7 +5,7 @@ from sqlalchemy import create_engine, Column, Integer, String, Numeric, Date, Fo
 from sqlalchemy.orm import declarative_base, sessionmaker
 import enum
 
-# ✅ CRITICAL FIX: Sabse upar page layout configuration bina kisi error ke
+# ✅ Wide Screen Layout Settings (Sabse upar bina kisi error ke)
 st.set_page_config(page_title="Lynx Customers Setup", layout="wide")
 
 DATABASE_URL = "postgresql://postgres.snbmurjcggthdvxyxyrd:DlLaglY98SkOzDq2@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres"
@@ -13,10 +13,12 @@ Base = declarative_base()
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine)
 
+# Complete Sync Table Structure
 class TenantLicense(Base):
     __tablename__ = 'tenant_licenses'
     id = Column(Integer, primary_key=True)
-    license_key = Column(String)
+    isp_name = Column(String(100))
+    license_key = Column(String(100))
     expiry_date = Column(Date)
     is_active = Column(Boolean)
 
@@ -53,11 +55,11 @@ class Customer(Base):
     status = Column(Enum(CustomerStatus))
     registration_date = Column(Date)
 
-# 🔑 LOCK CHECK BEFORE LOADING THE REST OF THE PAGE
+# 🔑 LOCK SYSTEM CHECK
 db = SessionLocal()
 lic = db.query(TenantLicense).filter(TenantLicense.license_key == "LNX-PREMIUM-2026").first()
 if not lic or not lic.is_active or lic.expiry_date < datetime.utcnow().date():
-    st.error("❌ Access Denied: License Expired. Please contact system admin.")
+    st.error("❌ Access Denied: Application License Expired.")
     st.stop()
 
 st.title("👤 Lynx Internet Fiber - Customer Profile Setup")
