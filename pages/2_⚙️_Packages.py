@@ -1,7 +1,9 @@
-st.set_page_config(layout="wide")
 import streamlit as st
 from sqlalchemy import create_engine, Column, Integer, String, Numeric, ForeignKey
 from sqlalchemy.orm import declarative_base, sessionmaker
+
+# ✅ Sabse top par wide layout declaration bina kisi error ke
+st.set_page_config(page_title="Lynx Network Settings", layout="wide")
 
 DATABASE_URL = "postgresql://postgres.snbmurjcggthdvxyxyrd:DlLaglY98SkOzDq2@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres"
 Base = declarative_base()
@@ -33,8 +35,7 @@ class SubArea(Base):
     area_id = Column(Integer, ForeignKey('areas.id'))
     name = Column(String)
 
-st.set_page_config(layout="wide")
-st.title("⚙️ Network Config: Packages & Geographical Areas")
+st.title("⚙️ Lynx Internet Fiber - System Configurations")
 
 db = SessionLocal()
 t1, t2 = st.tabs(["🏢 Manage Companies & Plans", "📍 Area Mapping"])

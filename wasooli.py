@@ -4,6 +4,9 @@ from datetime import datetime
 from sqlalchemy import create_engine, Column, Integer, String, Numeric, DateTime, Date, ForeignKey, Enum, Text
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 
+# ✅ Sabse upar wide layout set kiya taake koi error na aaye
+st.set_page_config(page_title="Lynx Fiber ISP Billing System", layout="wide")
+
 # 1. LIVE SUPABASE CONNECTION
 DATABASE_URL = "postgresql://postgres.snbmurjcggthdvxyxyrd:DlLaglY98SkOzDq2@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres"
 
@@ -11,7 +14,6 @@ Base = declarative_base()
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 SessionLocal = sessionmaker(bind=engine)
 
-# Database Structural Classes for Background Synchronization
 class CustomerStatus(enum.Enum):
     ACTIVE = "Active"
     SUSPENDED = "Suspended"
@@ -34,12 +36,7 @@ class Complaint(Base):
 
 Base.metadata.create_all(engine)
 
-# ==============================================================================
-# VISUAL FRONTEND (AS SHOWN IN THE VIDEO)
-# ==============================================================================
-st.set_page_config(page_title="Lynx Fiber ISP Billing System", layout="wide")
-
-# Custom Styling to mimic advanced ISP panel
+# Custom Styling
 st.markdown("""
     <style>
     .main-title { font-size:32px; font-weight:bold; color:#1E3A8A; margin-bottom:5px; }
@@ -50,87 +47,38 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Main Header
-st.markdown('<div class="main-title">Lynx Fiber - ISP Billing & Management System</div>', unsafe_allow_html=True)
-st.markdown('<div class="sub-title">Internet Service Provider Client Core Administration Panel</div>', unsafe_allow_html=True)
+# ✅ Badla hua Text (Lynx Dashboard)
+st.markdown('<div class="main-title">Lynx Internet Fiber - Dashboard Summary</div>', unsafe_allow_html=True)
+st.markdown('<div class="sub-title">Core Administration Control Panel</div>', unsafe_allow_html=True)
 
 db = SessionLocal()
-
 try:
-    # Live Counts from Supabase Engine
     total_cust = db.query(Customer).count()
     active_cust = db.query(Customer).filter(Customer.status == CustomerStatus.ACTIVE).count()
     inactive_cust = db.query(Customer).filter(Customer.status != CustomerStatus.ACTIVE).count()
-    
     open_complaints = db.query(Complaint).filter(Complaint.status == ComplaintStatus.OPEN).count()
     resolved_complaints = db.query(Complaint).filter(Complaint.status == ComplaintStatus.RESOLVED).count()
 finally:
     db.close()
 
-# ------------------------------------------------------------------------------
-# VIDEO LAYOUT SECTION 1: COMPLAINTS SUMMARY BOX
-# ------------------------------------------------------------------------------
 st.subheader("🛠️ Complaints & Support Module")
 col1, col2, col3 = st.columns(3)
-
 with col1:
-    st.markdown(f"""
-    <div class="card-box" style="border-left-color: #EF4444;">
-        <div class="card-title">🚨 Total Complaints Recieved</div>
-        <div class="card-value">{open_complaints + resolved_complaints}</div>
-    </div>
-    """, unsafe_allow_html=True)
-
+    st.markdown(f'<div class="card-box" style="border-left-color: #EF4444;"><div class="card-title">🚨 Total Complaints Recieved</div><div class="card-value">{open_complaints + resolved_complaints}</div></div>', unsafe_allow_html=True)
 with col2:
-    st.markdown(f"""
-    <div class="card-box" style="border-left-color: #F59E0B;">
-        <div class="card-title">⚠️ Open / Pending Issues</div>
-        <div class="card-value">{open_complaints}</div>
-    </div>
-    """, unsafe_allow_html=True)
-
+    st.markdown(f'<div class="card-box" style="border-left-color: #F59E0B;"><div class="card-title">⚠️ Open / Pending Issues</div><div class="card-value">{open_complaints}</div></div>', unsafe_allow_html=True)
 with col3:
-    st.markdown(f"""
-    <div class="card-box" style="border-left-color: #10B981;">
-        <div class="card-title">✅ Resolved Tickets</div>
-        <div class="card-value">{resolved_complaints}</div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f'<div class="card-box" style="border-left-color: #10B981;"><div class="card-title">✅ Resolved Tickets</div><div class="card-value">{resolved_complaints}</div></div>', unsafe_allow_html=True)
 
 st.markdown("---")
-
-# ------------------------------------------------------------------------------
-# VIDEO LAYOUT SECTION 2: USERS STATUS SUMMARY
-# ------------------------------------------------------------------------------
 st.subheader("👥 User Status & Receivables Summary")
 col4, col5, col6 = st.columns(3)
-
 with col4:
-    st.markdown(f"""
-    <div class="card-box" style="border-left-color: #3B82F6;">
-        <div class="card-title">📊 Total Registered Subscriptions</div>
-        <div class="card-value">{total_cust}</div>
-    </div>
-    """, unsafe_allow_html=True)
-
+    st.markdown(f'<div class="card-box" style="border-left-color: #3B82F6;"><div class="card-title">📊 Total Registered Subscriptions</div><div class="card-value">{total_cust}</div></div>', unsafe_allow_html=True)
 with col5:
-    st.markdown(f"""
-    <div class="card-box" style="border-left-color: #10B981;">
-        <div class="card-title">🟢 Active Users (Online)</div>
-        <div class="card-value">{active_cust}</div>
-    </div>
-    """, unsafe_allow_html=True)
-
+    st.markdown(f'<div class="card-box" style="border-left-color: #10B981;"><div class="card-title">🟢 Active Users (Online)</div><div class="card-value">{active_cust}</div></div>', unsafe_allow_html=True)
 with col6:
-    st.markdown(f"""
-    <div class="card-box" style="border-left-color: #DC2626;">
-        <div class="card-title">🔴 Not Active Users</div>
-        <div class="card-value">{inactive_cust}</div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f'<div class="card-box" style="border-left-color: #DC2626;"><div class="card-title">🔴 Not Active Users</div><div class="card-value">{inactive_cust}</div></div>', unsafe_allow_html=True)
 
-st.markdown("---")
-
-# Sidebar Status Indicator
 st.sidebar.success("Supabase Engine: Connected")
-st.sidebar.info("Use the multi-page menu system above to transition between setup data, invoices and ledger workflows.")
+st.sidebar.info("Use the multi-page menu system to manage your Lynx Internet Fiber network.")

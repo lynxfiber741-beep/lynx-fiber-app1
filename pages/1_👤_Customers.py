@@ -1,10 +1,12 @@
-st.set_page_config(layout="wide")
 import streamlit as st
 from datetime import datetime
 from decimal import Decimal
 from sqlalchemy import create_engine, Column, Integer, String, Numeric, Date, ForeignKey, Enum, Text
 from sqlalchemy.orm import declarative_base, sessionmaker
 import enum
+
+# ✅ Is file mein bhi full-screen setup sabse upar kar diya bina error ke
+st.set_page_config(page_title="Lynx Customers Setup", layout="wide")
 
 DATABASE_URL = "postgresql://postgres.snbmurjcggthdvxyxyrd:DlLaglY98SkOzDq2@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres"
 Base = declarative_base()
@@ -44,8 +46,7 @@ class Customer(Base):
     status = Column(Enum(CustomerStatus))
     registration_date = Column(Date)
 
-st.set_page_config(layout="wide")
-st.title("👤 Customer Registration & Setup")
+st.title("👤 Lynx Internet Fiber - Customer Profile Setup")
 
 db = SessionLocal()
 packages = db.query(Package).all()
