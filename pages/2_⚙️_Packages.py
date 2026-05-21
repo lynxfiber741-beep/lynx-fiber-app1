@@ -1,3 +1,4 @@
+st.set_page_config(layout="wide")
 import streamlit as st
 from sqlalchemy import create_engine, Column, Integer, String, Numeric, ForeignKey
 from sqlalchemy.orm import declarative_base, sessionmaker
