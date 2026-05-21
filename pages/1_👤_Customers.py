@@ -1,17 +1,24 @@
 import streamlit as st
 from datetime import datetime
 from decimal import Decimal
-from sqlalchemy import create_engine, Column, Integer, String, Numeric, Date, ForeignKey, Enum, Text
+from sqlalchemy import create_engine, Column, Integer, String, Numeric, Date, ForeignKey, Enum, Boolean
 from sqlalchemy.orm import declarative_base, sessionmaker
 import enum
 
-# ✅ Is file mein bhi full-screen setup sabse upar kar diya bina error ke
+# ✅ Wide Screen Settings Top Par
 st.set_page_config(page_title="Lynx Customers Setup", layout="wide")
 
 DATABASE_URL = "postgresql://postgres.snbmurjcggthdvxyxyrd:DlLaglY98SkOzDq2@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres"
 Base = declarative_base()
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine)
+
+class TenantLicense(Base):
+    __tablename__ = 'tenant_licenses'
+    id = Column(Integer, primary_key=True)
+    license_key = Column(String)
+    expiry_date = Column(Date)
+    is_active = Column(Boolean)
 
 class BillingType(enum.Enum):
     MONTHLY_FIXED = "Monthly-Fixed"
@@ -46,14 +53,20 @@ class Customer(Base):
     status = Column(Enum(CustomerStatus))
     registration_date = Column(Date)
 
+# 🔑 LICENSE CHECK FOR PAGE ACCESS
+db = SessionLocal()
+lic = db.query(TenantLicense).filter(TenantLicense.license_key == "LNX-PREMIUM-2026").first()
+if not lic or not lic.is_active or lic.expiry_date < datetime.utcnow().date():
+    st.error("❌ Access Denied: License Expired. Please contact system admin.")
+    st.stop()
+
 st.title("👤 Lynx Internet Fiber - Customer Profile Setup")
 
-db = SessionLocal()
 packages = db.query(Package).all()
 sub_areas = db.query(SubArea).all()
 
 if not packages or not sub_areas:
-    st.warning("⚠️ Pehle 'Packages & Areas' waale page par ja kar settings complete karein!")
+    st.warning("⚠️ Pehle 'Packages & Areas' waale page par ja kar configurations complete karein!")
 else:
     with st.form("add_customer_form"):
         col1, col2 = st.columns(2)
@@ -79,5 +92,5 @@ else:
             )
             db.add(new_c)
             db.commit()
-            st.success(f"🎉 Customer '{c_name}' successfully live database par add ho gaya!")
+            st.success(f"🎉 Subscriber '{c_name}' successfully added to Lynx database!")
 db.close()

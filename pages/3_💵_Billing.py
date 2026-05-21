@@ -1,17 +1,24 @@
 import streamlit as st
 from datetime import datetime, timedelta
 from decimal import Decimal
-from sqlalchemy import create_engine, Column, Integer, String, Numeric, Date, ForeignKey, Enum, Text
+from sqlalchemy import create_engine, Column, Integer, String, Numeric, Date, ForeignKey, Enum, Boolean
 from sqlalchemy.orm import declarative_base, sessionmaker
 import enum
 
-# Edge-to-edge layout settings (Video jaisa complete wide screen karne ke liye)
+# ✅ Wide Screen Settings Top Par
 st.set_page_config(page_title="Lynx Fiber Billing", layout="wide")
 
 DATABASE_URL = "postgresql://postgres.snbmurjcggthdvxyxyrd:DlLaglY98SkOzDq2@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres"
 Base = declarative_base()
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine)
+
+class TenantLicense(Base):
+    __tablename__ = 'tenant_licenses'
+    id = Column(Integer, primary_key=True)
+    license_key = Column(String)
+    expiry_date = Column(Date)
+    is_active = Column(Boolean)
 
 class InvoiceStatus(enum.Enum):
     UNPAID = "Unpaid"
@@ -59,12 +66,17 @@ class Payment(Base):
     payment_date = Column(Date)
     payment_method = Column(Enum(PaymentMethod))
 
+# 🔑 LICENSE CHECK FOR PAGE ACCESS
+db = SessionLocal()
+lic = db.query(TenantLicense).filter(TenantLicense.license_key == "LNX-PREMIUM-2026").first()
+if not lic or not lic.is_active or lic.expiry_date < datetime.utcnow().date():
+    st.error("❌ Access Denied: License Expired.")
+    st.stop()
+
 st.title("💵 Lynx Internet Fiber - Invoicing & Collections Engine")
 
-db = SessionLocal()
 t1, t2 = st.tabs(["⚡ Bulk Generate Invoices", "💰 Bill Collections & Recovery Ledger"])
 
-# --- TAB 1: BULK GENERATE INVOICES ---
 with t1:
     st.subheader("Monthly Plan Invoice Generation")
     current_month = datetime.utcnow().strftime("%B %Y")
@@ -81,34 +93,27 @@ with t1:
         generated_count = 0
         
         for cust in customers:
-            exists = db.query(Invoice).filter(
-                Invoice.customer_id == cust.id, 
-                Invoice.billing_month == current_month
-            ).first()
-            
+            exists = db.query(Invoice).filter(Invoice.customer_id == cust.id, Invoice.billing_month == current_month).first()
             if not exists:
                 pack = db.query(Package).filter(Package.id == cust.package_id).first()
                 base_amt = pack.sale_price if pack else Decimal(0)
                 disc = cust.monthly_discount if cust.monthly_discount else Decimal(0)
                 final_bill = base_amt - disc
-                
                 inv_num = f"LNX-{cust.customer_code}-{datetime.utcnow().strftime('%y%m%d%H%M%S')}"
                 
-                new_inv = Invoice(
+                db.add(Invoice(
                     invoice_number=inv_num, customer_id=cust.id, billing_month=current_month,
                     issue_date=issue_d, due_date=due_d, base_amount=base_amt,
                     discount_applied=disc, total_payable=final_bill, status=InvoiceStatus.UNPAID
-                )
-                db.add(new_inv)
+                ))
                 generated_count += 1
                 
         db.commit()
         if generated_count > 0:
-            st.success(f"✅ Success! {generated_count} Lynx Internet Fiber Invoices processed successfully.")
+            st.success(f"✅ Success! {generated_count} Lynx Internet Fiber Invoices processed.")
         else:
             st.warning("All subscribers are already invoiced for this month.")
 
-# --- TAB 2: RECORD BILL COLLECTIONS (No "Wasooli" text anymore) ---
 with t2:
     st.subheader("Post Outstanding Collections")
     all_unpaid_invoices = db.query(Invoice, Customer).join(Customer, Invoice.customer_id == Customer.id).filter(Invoice.status != InvoiceStatus.PAID).all()
@@ -130,12 +135,7 @@ with t2:
             
         if st.button("💾 Post Transaction to Ledger"):
             target_invoice.status = InvoiceStatus.PAID if Decimal(amt_rec) == target_invoice.total_payable else InvoiceStatus.PARTIALLY_PAID
-            
-            new_pay = Payment(
-                invoice_id=target_invoice.id, amount_paid=Decimal(amt_rec),
-                payment_date=datetime.utcnow().date(), payment_method=PaymentMethod(pay_meth)
-            )
-            db.add(new_pay)
+            db.add(Payment(invoice_id=target_invoice.id, amount_paid=Decimal(amt_rec), payment_date=datetime.utcnow().date(), payment_method=PaymentMethod(pay_meth)))
             db.commit()
             st.success("💰 Accounts ledger successfully updated on Lynx Internet Fiber back-end.")
 
