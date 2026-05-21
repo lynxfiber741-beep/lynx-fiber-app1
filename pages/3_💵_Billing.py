@@ -1,4 +1,3 @@
-st.set_page_config(layout="wide")
 import streamlit as st
 from datetime import datetime, timedelta
 from decimal import Decimal
